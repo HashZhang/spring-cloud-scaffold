@@ -1,0 +1,356 @@
+test:
+  read-timeout: true
+  exception-throw: true
+spring:
+  profiles: zone1-service-provider-instance1
+  application:
+    # 应用名称
+    name: service-provider
+  cloud:
+    loadbalancer:
+      ribbon:
+        enabled: false
+server:
+  port: 8001
+  undertow:
+    # access log相关配置
+    accesslog:
+      # 存放目录
+      dir: ./log # 存放目录
+      # 是否开启
+      enabled: true
+      # 格式
+      pattern: '[%{time,yyyy-MM-dd HH:mm:ss.S z}] %m %U "%q" %s %D %b %{i,X-B3-TraceId},%{i,X-B3-SpanId}
+                %{i,X-Real-IP} %{i,Referer} "%{i,User-Agent}" %{i,Platform} %l %u
+                %I %v %a'
+      # 文件前缀
+      prefix: access.
+    # 以下的配置会影响buffer,这些buffer会用于服务器连接的IO操作,有点类似netty的池化内存管理
+    # 每块buffer的空间大小,越小的空间被利用越充分，不要设置太大，以免影响其他应用，合适即可
+    # 最好和大部分请求的大小一样，这样减少内存分配即二叉树寻址时间
+    # 其实就是一颗颗平衡二叉树，这里配置二叉树最小分配内存大小为1kb，小于1kb则线性分配
+    buffer-size: 128
+    # 是否分配的直接内存(NIO直接分配的堆外内存)，这里开启，所以java启动参数需要配置下直接内存大小，减少不必要的GC
+    directBuffers: true
+    # 设置IO线程数, 它主要执行非阻塞的任务,它们会负责多个连接, 默认设置每个CPU核心一个线程
+    io-threads: 32
+    # 阻塞任务线程池, 当执行类似servlet请求阻塞IO操作, undertow会从这个线程池中取得线程
+    # 它的值设置取决于系统线程执行任务的阻塞系数，默认值是IO线程数*8
+    worker-threads: 512
+
+# actuator设置
+management:
+  endpoint:
+    health:
+      # 对于Health接口，显示详情
+      show-details: always
+  endpoints:
+    jmx:
+      exposure:
+        # jmx不暴露所有接口
+        exclude: '*'
+    web:
+      exposure:
+        # http暴露所有actuator接口
+        include: '*'
+
+eureka:
+  client:
+    # eureka client刷新本地缓存时间
+    # 默认30s
+    registry-fetch-interval-seconds: 5
+    service-url:
+      # 默认eureka集群, 这里一定不能用中划线，因为是map的key
+      defaultZone: http://127.0.0.1:8211/eureka/
+  instance:
+    lease-expiration-duration-in-seconds: 15
+    lease-renewal-interval-in-seconds: 5
+    prefer-ip-address: true
+    metadata-map:
+      zone: zone1
+    instance-id: ${spring.cloud.client.ip-address}:${spring.application.name}:${server.port}
+    # app名称，不填写在Spring-cloud-netflix体系下默认就是spring.application.name
+    appname: ${spring.application.name}
+    # 目前没啥卵用，可以用这个扩展一些功能
+    #    app-group-name:
+    # 主机名称，如果不填写，就通过org.springframework.cloud.commons.util.InetUtils从网卡读取，如果填写了，则会覆盖，并ip-address也需要设置
+    #    hostname:
+    # ip名称，如果不填写，就通过org.springframework.cloud.commons.util.InetUtils从网卡读取，如果填写了，则会覆盖，并hostname也需要设置
+    #    ip-address:
+    # 是否注册到Eureka就是UP的状态，如果标记为false，那么在注册到Eureka上面的时候就是Starting状态而不是UP状态，参考源码：`com.netflix.appinfo.providers.EurekaConfigBasedInstanceInfoProvider`
+    # 之后我们会想到一个问题，就是什么时候才将
+    instanceEnabledOnit: true
+    non-secure-port: ${server.port}
+
+# 关闭 feign 的 hystrix
+feign:
+  hystrix:
+    enabled: false
+---
+test:
+  read-timeout: false
+  exception-throw: false
+spring:
+  profiles: zone1-service-provider-instance2
+  application:
+    # 应用名称
+    name: service-provider
+  cloud:
+    loadbalancer:
+      ribbon:
+        enabled: false
+server:
+  port: 8002
+  undertow:
+    # access log相关配置
+    accesslog:
+      # 存放目录
+      dir: ./log # 存放目录
+      # 是否开启
+      enabled: true
+      # 格式
+      pattern: '[%{time,yyyy-MM-dd HH:mm:ss.S z}] %m %U "%q" %s %D %b %{i,X-B3-TraceId},%{i,X-B3-SpanId}
+                %{i,X-Real-IP} %{i,Referer} "%{i,User-Agent}" %{i,Platform} %l %u
+                %I %v %a'
+      # 文件前缀
+      prefix: access.
+    # 以下的配置会影响buffer,这些buffer会用于服务器连接的IO操作,有点类似netty的池化内存管理
+    # 每块buffer的空间大小,越小的空间被利用越充分，不要设置太大，以免影响其他应用，合适即可
+    # 最好和大部分请求的大小一样，这样减少内存分配即二叉树寻址时间
+    # 其实就是一颗颗平衡二叉树，这里配置二叉树最小分配内存大小为1kb，小于1kb则线性分配
+    buffer-size: 128
+    # 是否分配的直接内存(NIO直接分配的堆外内存)，这里开启，所以java启动参数需要配置下直接内存大小，减少不必要的GC
+    directBuffers: true
+    # 设置IO线程数, 它主要执行非阻塞的任务,它们会负责多个连接, 默认设置每个CPU核心一个线程
+    io-threads: 32
+    # 阻塞任务线程池, 当执行类似servlet请求阻塞IO操作, undertow会从这个线程池中取得线程
+    # 它的值设置取决于系统线程执行任务的阻塞系数，默认值是IO线程数*8
+    worker-threads: 512
+
+# actuator设置
+management:
+  endpoint:
+    health:
+      # 对于Health接口，显示详情
+      show-details: always
+  endpoints:
+    jmx:
+      exposure:
+        # jmx不暴露所有接口
+        exclude: '*'
+    web:
+      exposure:
+        # http暴露所有actuator接口
+        include: '*'
+
+eureka:
+  client:
+    # eureka client刷新本地缓存时间
+    # 默认30s
+    registry-fetch-interval-seconds: 5
+    service-url:
+      # 默认eureka集群, 这里一定不能用中划线，因为是map的key
+      defaultZone: http://127.0.0.1:8211/eureka/
+  instance:
+    lease-expiration-duration-in-seconds: 15
+    lease-renewal-interval-in-seconds: 5
+    prefer-ip-address: true
+    metadata-map:
+      zone: zone1
+    instance-id: ${spring.cloud.client.ip-address}:${spring.application.name}:${server.port}
+    # app名称，不填写在Spring-cloud-netflix体系下默认就是spring.application.name
+    appname: ${spring.application.name}
+    # 目前没啥卵用，可以用这个扩展一些功能
+    #    app-group-name:
+    # 主机名称，如果不填写，就通过org.springframework.cloud.commons.util.InetUtils从网卡读取，如果填写了，则会覆盖，并ip-address也需要设置
+    #    hostname:
+    # ip名称，如果不填写，就通过org.springframework.cloud.commons.util.InetUtils从网卡读取，如果填写了，则会覆盖，并hostname也需要设置
+    #    ip-address:
+    # 是否注册到Eureka就是UP的状态，如果标记为false，那么在注册到Eureka上面的时候就是Starting状态而不是UP状态，参考源码：`com.netflix.appinfo.providers.EurekaConfigBasedInstanceInfoProvider`
+    # 之后我们会想到一个问题，就是什么时候才将
+    instanceEnabledOnit: true
+    non-secure-port: ${server.port}
+
+# 关闭 feign 的 hystrix
+feign:
+  hystrix:
+    enabled: false
+---
+test:
+  read-timeout: true
+  exception-throw: true
+spring:
+  profiles: zone1-service-provider2-instance1
+  application:
+    # 应用名称
+    name: service-provider2
+  cloud:
+    loadbalancer:
+      ribbon:
+        enabled: false
+server:
+  port: 8004
+  undertow:
+    # access log相关配置
+    accesslog:
+      # 存放目录
+      dir: ./log # 存放目录
+      # 是否开启
+      enabled: true
+      # 格式
+      pattern: '[%{time,yyyy-MM-dd HH:mm:ss.S z}] %m %U "%q" %s %D %b %{i,X-B3-TraceId},%{i,X-B3-SpanId}
+                %{i,X-Real-IP} %{i,Referer} "%{i,User-Agent}" %{i,Platform} %l %u
+                %I %v %a'
+      # 文件前缀
+      prefix: access.
+    # 以下的配置会影响buffer,这些buffer会用于服务器连接的IO操作,有点类似netty的池化内存管理
+    # 每块buffer的空间大小,越小的空间被利用越充分，不要设置太大，以免影响其他应用，合适即可
+    # 最好和大部分请求的大小一样，这样减少内存分配即二叉树寻址时间
+    # 其实就是一颗颗平衡二叉树，这里配置二叉树最小分配内存大小为1kb，小于1kb则线性分配
+    buffer-size: 128
+    # 是否分配的直接内存(NIO直接分配的堆外内存)，这里开启，所以java启动参数需要配置下直接内存大小，减少不必要的GC
+    directBuffers: true
+    # 设置IO线程数, 它主要执行非阻塞的任务,它们会负责多个连接, 默认设置每个CPU核心一个线程
+    io-threads: 32
+    # 阻塞任务线程池, 当执行类似servlet请求阻塞IO操作, undertow会从这个线程池中取得线程
+    # 它的值设置取决于系统线程执行任务的阻塞系数，默认值是IO线程数*8
+    worker-threads: 512
+
+# actuator设置
+management:
+  endpoint:
+    health:
+      # 对于Health接口，显示详情
+      show-details: always
+  endpoints:
+    jmx:
+      exposure:
+        # jmx不暴露所有接口
+        exclude: '*'
+    web:
+      exposure:
+        # http暴露所有actuator接口
+        include: '*'
+
+eureka:
+  client:
+    # eureka client刷新本地缓存时间
+    # 默认30s
+    registry-fetch-interval-seconds: 5
+    service-url:
+      # 默认eureka集群, 这里一定不能用中划线，因为是map的key
+      defaultZone: http://127.0.0.1:8211/eureka/
+  instance:
+    lease-expiration-duration-in-seconds: 15
+    lease-renewal-interval-in-seconds: 5
+    prefer-ip-address: true
+    metadata-map:
+      zone: zone1
+    instance-id: ${spring.cloud.client.ip-address}:${spring.application.name}:${server.port}
+    # app名称，不填写在Spring-cloud-netflix体系下默认就是spring.application.name
+    appname: ${spring.application.name}
+    # 目前没啥卵用，可以用这个扩展一些功能
+    #    app-group-name:
+    # 主机名称，如果不填写，就通过org.springframework.cloud.commons.util.InetUtils从网卡读取，如果填写了，则会覆盖，并ip-address也需要设置
+    #    hostname:
+    # ip名称，如果不填写，就通过org.springframework.cloud.commons.util.InetUtils从网卡读取，如果填写了，则会覆盖，并hostname也需要设置
+    #    ip-address:
+    # 是否注册到Eureka就是UP的状态，如果标记为false，那么在注册到Eureka上面的时候就是Starting状态而不是UP状态，参考源码：`com.netflix.appinfo.providers.EurekaConfigBasedInstanceInfoProvider`
+    # 之后我们会想到一个问题，就是什么时候才将
+    instanceEnabledOnit: true
+    non-secure-port: ${server.port}
+
+# 关闭 feign 的 hystrix
+feign:
+  hystrix:
+    enabled: false
+---
+test:
+  read-timeout: true
+  exception-throw: true
+spring:
+  profiles: zone2-service-provider-instance1
+  application:
+    # 应用名称
+    name: service-provider
+  cloud:
+    loadbalancer:
+      ribbon:
+        enabled: false
+server:
+  port: 8003
+  undertow:
+    # access log相关配置
+    accesslog:
+      # 存放目录
+      dir: ./log # 存放目录
+      # 是否开启
+      enabled: true
+      # 格式
+      pattern: '[%{time,yyyy-MM-dd HH:mm:ss.S z}] %m %U "%q" %s %D %b %{i,X-B3-TraceId},%{i,X-B3-SpanId}
+                %{i,X-Real-IP} %{i,Referer} "%{i,User-Agent}" %{i,Platform} %l %u
+                %I %v %a'
+      # 文件前缀
+      prefix: access.
+    # 以下的配置会影响buffer,这些buffer会用于服务器连接的IO操作,有点类似netty的池化内存管理
+    # 每块buffer的空间大小,越小的空间被利用越充分，不要设置太大，以免影响其他应用，合适即可
+    # 最好和大部分请求的大小一样，这样减少内存分配即二叉树寻址时间
+    # 其实就是一颗颗平衡二叉树，这里配置二叉树最小分配内存大小为1kb，小于1kb则线性分配
+    buffer-size: 128
+    # 是否分配的直接内存(NIO直接分配的堆外内存)，这里开启，所以java启动参数需要配置下直接内存大小，减少不必要的GC
+    directBuffers: true
+    # 设置IO线程数, 它主要执行非阻塞的任务,它们会负责多个连接, 默认设置每个CPU核心一个线程
+    io-threads: 32
+    # 阻塞任务线程池, 当执行类似servlet请求阻塞IO操作, undertow会从这个线程池中取得线程
+    # 它的值设置取决于系统线程执行任务的阻塞系数，默认值是IO线程数*8
+    worker-threads: 512
+
+# actuator设置
+management:
+  endpoint:
+    health:
+      # 对于Health接口，显示详情
+      show-details: always
+  endpoints:
+    jmx:
+      exposure:
+        # jmx不暴露所有接口
+        exclude: '*'
+    web:
+      exposure:
+        # http暴露所有actuator接口
+        include: '*'
+
+eureka:
+  client:
+    # eureka client刷新本地缓存时间
+    # 默认30s
+    registry-fetch-interval-seconds: 5
+    service-url:
+      # 默认eureka集群, 这里一定不能用中划线，因为是map的key
+      defaultZone: http://127.0.0.1:8211/eureka/
+  instance:
+    lease-expiration-duration-in-seconds: 15
+    lease-renewal-interval-in-seconds: 5
+    prefer-ip-address: true
+    metadata-map:
+      zone: zone2
+    instance-id: ${spring.cloud.client.ip-address}:${spring.application.name}:${server.port}
+    # app名称，不填写在Spring-cloud-netflix体系下默认就是spring.application.name
+    appname: ${spring.application.name}
+    # 目前没啥卵用，可以用这个扩展一些功能
+    #    app-group-name:
+    # 主机名称，如果不填写，就通过org.springframework.cloud.commons.util.InetUtils从网卡读取，如果填写了，则会覆盖，并ip-address也需要设置
+    #    hostname:
+    # ip名称，如果不填写，就通过org.springframework.cloud.commons.util.InetUtils从网卡读取，如果填写了，则会覆盖，并hostname也需要设置
+    #    ip-address:
+    # 是否注册到Eureka就是UP的状态，如果标记为false，那么在注册到Eureka上面的时候就是Starting状态而不是UP状态，参考源码：`com.netflix.appinfo.providers.EurekaConfigBasedInstanceInfoProvider`
+    # 之后我们会想到一个问题，就是什么时候才将
+    instanceEnabledOnit: true
+    non-secure-port: ${server.port}
+
+# 关闭 feign 的 hystrix
+feign:
+  hystrix:
+    enabled: false
+
