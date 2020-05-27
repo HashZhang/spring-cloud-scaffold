@@ -8,7 +8,8 @@ spring:
   cloud:
     loadbalancer:
       retry:
-        enabled: true
+        # 不用loadbalancer自带的retry，用我们自己的resilience4j的retry
+        enabled: false
       ribbon:
         enabled: false
       cache:
@@ -96,6 +97,9 @@ feign:
       default:
         connectTimeout: 1000
         readTimeout: 1000
+      service-provider2:
+        connectTimeout: 1000
+        readTimeout: 8000
 
 resilience4j.circuitbreaker:
   configs:
@@ -114,10 +118,12 @@ resilience4j.circuitbreaker:
 resilience4j.retry:
   configs:
     default:
-      maxRetryAttempts: 2
+      maxRetryAttempts: 1
       waitDuration: 1
       retryExceptions:
         - java.lang.Exception
+    service-provider2:
+      maxRetryAttempts: 4
 
 resilience4j.thread-pool-bulkhead:
   configs:

@@ -1,5 +1,7 @@
 package com.github.hashjang.hoxton.service.consumer.config;
 
+import brave.Span;
+import brave.Tracer;
 import feign.Request;
 import feign.Response;
 import io.github.resilience4j.bulkhead.BulkheadRegistry;
@@ -53,14 +55,15 @@ public class LoadBalancerConfig {
     }
 
     @Bean
-    public FeignBlockingLoadBalancerClient feignBlockingLoadBalancerCircuitBreakableClient(HttpClient httpClient, BlockingLoadBalancerClient loadBalancerClient, BulkheadRegistry bulkheadRegistry, ThreadPoolBulkheadRegistry threadPoolBulkheadRegistry, CircuitBreakerRegistry circuitBreakerRegistry, RateLimiterRegistry rateLimiterRegistry, RetryRegistry retryRegistry) {
+    public FeignBlockingLoadBalancerClient feignBlockingLoadBalancerCircuitBreakableClient(HttpClient httpClient, BlockingLoadBalancerClient loadBalancerClient, BulkheadRegistry bulkheadRegistry, ThreadPoolBulkheadRegistry threadPoolBulkheadRegistry, CircuitBreakerRegistry circuitBreakerRegistry, RateLimiterRegistry rateLimiterRegistry, RetryRegistry retryRegistry, Tracer tracer) {
         return new FeignBlockingLoadBalancerClient(new CircuitBreakableClient(
                 httpClient,
                 bulkheadRegistry,
                 threadPoolBulkheadRegistry,
                 circuitBreakerRegistry,
                 rateLimiterRegistry,
-                retryRegistry),
+                retryRegistry,
+                tracer),
                 loadBalancerClient);
     }
 
@@ -71,14 +74,16 @@ public class LoadBalancerConfig {
         private final CircuitBreakerRegistry circuitBreakerRegistry;
         private final RateLimiterRegistry rateLimiterRegistry;
         private final RetryRegistry retryRegistry;
+        private final Tracer tracer;
 
-        public CircuitBreakableClient(HttpClient httpClient, BulkheadRegistry bulkheadRegistry, ThreadPoolBulkheadRegistry threadPoolBulkheadRegistry, CircuitBreakerRegistry circuitBreakerRegistry, RateLimiterRegistry rateLimiterRegistry, RetryRegistry retryRegistry) {
+        public CircuitBreakableClient(HttpClient httpClient, BulkheadRegistry bulkheadRegistry, ThreadPoolBulkheadRegistry threadPoolBulkheadRegistry, CircuitBreakerRegistry circuitBreakerRegistry, RateLimiterRegistry rateLimiterRegistry, RetryRegistry retryRegistry, Tracer tracer) {
             super(httpClient);
             this.bulkheadRegistry = bulkheadRegistry;
             this.threadPoolBulkheadRegistry = threadPoolBulkheadRegistry;
             this.circuitBreakerRegistry = circuitBreakerRegistry;
             this.rateLimiterRegistry = rateLimiterRegistry;
             this.retryRegistry = retryRegistry;
+            this.tracer = tracer;
         }
 
         @Override
@@ -100,9 +105,11 @@ public class LoadBalancerConfig {
             } catch (ConfigurationNotFoundException e) {
                 circuitBreaker = circuitBreakerRegistry.circuitBreaker(instanceId);
             }
+            //保持traceId
+            Span span = tracer.currentSpan();
             Supplier<CompletionStage<Response>> completionStageSupplier = ThreadPoolBulkhead.decorateSupplier(threadPoolBulkhead,
                     CircuitBreaker.decorateSupplier(circuitBreaker, () -> {
-                        try {
+                        try (Tracer.SpanInScope cleared = tracer.withSpanInScope(span)) {
                             log.info("call url: {} -> {}", request.httpMethod(), request.url());
                             Response execute = super.execute(request, options);
                             if (execute.status() != HttpStatus.OK.value()) {
