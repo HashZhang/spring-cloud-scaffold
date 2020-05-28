@@ -15,6 +15,7 @@
         <module>spring-cloud-hoxton-eureka-server</module>
         <module>spring-cloud-hoxton-service-provider</module>
         <module>spring-cloud-hoxton-service-consumer</module>
+        <module>spring-cloud-hoxton-api-gateway</module>
     </modules>
 
 

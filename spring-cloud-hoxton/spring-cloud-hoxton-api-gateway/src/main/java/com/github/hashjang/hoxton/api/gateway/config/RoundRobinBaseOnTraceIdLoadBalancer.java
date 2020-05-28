@@ -1,4 +1,4 @@
-package com.github.hashjang.hoxton.service.consumer.config;
+package com.github.hashjang.hoxton.api.gateway.config;
 
 import brave.Tracer;
 import com.github.benmanes.caffeine.cache.Caffeine;

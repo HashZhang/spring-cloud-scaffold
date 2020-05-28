@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <Properties>
+        <Property name="springAppName">service-api-gateway</Property>
+        <Property name="LOG_ROOT">log</Property>
+        <Property name="LOG_EXCEPTION_CONVERSION_WORD">%xwEx</Property>
+        <Property name="LOG_LEVEL_PATTERN">%5p</Property>
+        <Property name="LOG_DATEFORMAT_PATTERN">yyyy-MM-dd HH:mm:ss.SSS</Property>
+        <Property name="logFormat">
+            %d{${LOG_DATEFORMAT_PATTERN}} ${LOG_LEVEL_PATTERN} [${springAppName},%X{X-B3-TraceId},%X{X-B3-SpanId}]
+            [${sys:PID}] [%t][%C:%L]: %m%n${sys:LOG_EXCEPTION_CONVERSION_WORD}
+        </Property>
+        <Property name="CONSOLE_LOG_PATTERN">
+            %d{${LOG_DATEFORMAT_PATTERN}} ${LOG_LEVEL_PATTERN} [${springAppName},%X{X-B3-TraceId},%X{X-B3-SpanId}]
+            [${sys:PID}] [%t][%C:%L]: %m%n${sys:LOG_EXCEPTION_CONVERSION_WORD}
+        </Property>
+    </Properties>
+
+
+    <appenders>
+        <Console name="console" target="SYSTEM_OUT">
+            <!--控制台只输出level及以上级别的信息（onMatch），其他的直接拒绝（onMismatch） -->
+            <ThresholdFilter level="debug" onMatch="ACCEPT"
+                             onMismatch="DENY"/>
+            <PatternLayout pattern="${CONSOLE_LOG_PATTERN}"/>
+        </Console>
+        <RollingFile name="file"
+                     fileName="${LOG_ROOT}/app.log" append="true"
+                     filePattern="${LOG_ROOT}/app.log.%d{yyyy-MM-dd.HH}.gz">
+            <PatternLayout pattern="${logFormat}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1"
+                                           modulate="true"/>
+            </Policies>
+            <DefaultRolloverStrategy>
+                <!--
+                      * only files in the log folder, no sub folders
+                      * only rolled over log files (name match)
+                      * either when more than 10 matching files exist or when the max disk usage is exceeded
+                -->
+                <Delete basePath="${LOG_ROOT}" maxDepth="1">
+                    <IfFileName glob="*app.log.*.gz">
+                        <IfAny>
+                            <IfAccumulatedFileCount exceeds="168"/>
+                        </IfAny>
+                    </IfFileName>
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+    </appenders>
+
+    <loggers>
+        <!--default logger-->
+        <Asyncroot level="info" includeLocation="true">
+            <appender-ref ref="console"/>
+            <!--                        <appender-ref ref="file"/>-->
+        </Asyncroot>
+        <AsyncLogger name="RocketmqClient" level="error" additivity="false" includeLocation="true">
+            <!--            <appender-ref ref="console"/>-->
+            <appender-ref ref="file"/>
+        </AsyncLogger>
+        <AsyncLogger name="com.hopegaming.apigateway.filter" level="debug" additivity="false" includeLocation="true">
+            <appender-ref ref="console"/>
+            <!--                        <appender-ref ref="file"/>-->
+        </AsyncLogger>
+        <AsyncLogger name="RocketmqCommon" level="error" additivity="false" includeLocation="true">
+            <!--            <appender-ref ref="console"/>-->
+            <appender-ref ref="file"/>
+        </AsyncLogger>
+        <AsyncLogger name="RocketmqRemoting" level="error" additivity="false" includeLocation="true">
+            <!--            <appender-ref ref="console"/>-->
+            <appender-ref ref="file"/>
+        </AsyncLogger>
+        <AsyncLogger name="com.alibaba.druid.pool.DruidDataSourceStatLoggerImpl" level="error" additivity="false"
+                     includeLocation="true">
+            <!--            <appender-ref ref="console"/>-->
+            <appender-ref ref="file"/>
+        </AsyncLogger>
+
+        <!--测试用日志，查看sql语句以及是否处于事务内-->
+        <AsyncLogger name="com.hopegaming.realsport.dal.db.mapper" level="error" additivity="false"
+                     includeLocation="true">
+            <!--            <appender-ref ref="console"/>-->
+            <appender-ref ref="file"/>
+        </AsyncLogger>
+        <AsyncLogger name="com.hopegaming.jackpot.dal.db.mapper" level="error" additivity="false"
+                     includeLocation="true">
+            <!--            <appender-ref ref="console"/>-->
+            <appender-ref ref="file"/>
+        </AsyncLogger>
+        <AsyncLogger name="com.hopegaming.realsport.history.db.mapper" level="error" additivity="false"
+                     includeLocation="true">
+            <!--            <appender-ref ref="console"/>-->
+            <appender-ref ref="file"/>
+        </AsyncLogger>
+        <AsyncLogger name="org.mybatis" level="debug" additivity="false" includeLocation="true">
+            <appender-ref ref="console"/>
+            <!--            <appender-ref ref="file"/>-->
+        </AsyncLogger>
+    </loggers>
+</configuration>
