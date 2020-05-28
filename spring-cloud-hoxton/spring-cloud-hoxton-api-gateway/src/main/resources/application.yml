@@ -25,8 +25,8 @@ spring:
             factor: 2
             firstBackoff: 100ms
             maxBackoff: 500ms
-        service-provider:
-          retries: 0
+      #        service-provider:
+      #          retries: 0
       routes:
         - id: first_route
           uri: lb://service-provider
