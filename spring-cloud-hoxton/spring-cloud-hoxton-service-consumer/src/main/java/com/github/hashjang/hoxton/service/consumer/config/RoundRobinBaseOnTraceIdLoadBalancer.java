@@ -1,5 +1,6 @@
 package com.github.hashjang.hoxton.service.consumer.config;
 
+import brave.Span;
 import brave.Tracer;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
@@ -49,7 +50,11 @@ public class RoundRobinBaseOnTraceIdLoadBalancer implements ReactorServiceInstan
             log.warn("No servers available for service: " + this.serviceId);
             return new EmptyResponse();
         }
-        long l = tracer.currentSpan().context().traceId();
+        Span currentSpan = tracer.currentSpan();
+        if (currentSpan == null) {
+            currentSpan = tracer.newTrace();
+        }
+        long l = currentSpan.context().traceId();
         int seed = positionCache.get(l).getAndIncrement();
         return new DefaultResponse(serviceInstances.get(seed % serviceInstances.size()));
     }
