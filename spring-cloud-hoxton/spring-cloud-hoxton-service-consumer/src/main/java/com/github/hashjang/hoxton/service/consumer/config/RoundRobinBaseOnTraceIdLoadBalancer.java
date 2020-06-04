@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 @Log4j2
 public class RoundRobinBaseOnTraceIdLoadBalancer implements ReactorServiceInstanceLoadBalancer {
+    //这个超时时间，需要设置的比你的请求的 connectTimeout + readTimeout 长
     private final LoadingCache<Long, AtomicInteger> positionCache = Caffeine.newBuilder().expireAfterWrite(3, TimeUnit.SECONDS).build(k -> new AtomicInteger(ThreadLocalRandom.current().nextInt(0, 1000)));
     private final String serviceId;
     private final ServiceInstanceListSupplier serviceInstanceListSupplier;
@@ -51,6 +52,8 @@ public class RoundRobinBaseOnTraceIdLoadBalancer implements ReactorServiceInstan
             return new EmptyResponse();
         }
         Span currentSpan = tracer.currentSpan();
+        //如果没有 traceId，就生成一个新的，但是最好检查下为啥会没有
+        //是不是 MQ 消费这种没有主动生成 traceId 的情况，最好主动生成下
         if (currentSpan == null) {
             currentSpan = tracer.newTrace();
         }
