@@ -32,6 +32,7 @@ public class CustomizedCircuitBreakerAspect {
         this.retryRegistry = retryRegistry;
     }
 
+    //配置哪些包下的FeignClient进行重试，必须含有@FeignClient注解
     @Around("execution(* com.github.hashjang.hoxton..*(..)) && @within(org.springframework.cloud.openfeign.FeignClient)")
     public Object feignClientWasCalled(final ProceedingJoinPoint pjp) throws Throwable {
         boolean isGet = false;
@@ -41,6 +42,8 @@ public class CustomizedCircuitBreakerAspect {
         if (StringUtils.isBlank(serviceName)) {
             serviceName = annotation.name();
         }
+
+        //查看是否是GET请求
         RequestMapping requestMapping = signature.getMethod().getAnnotation(RequestMapping.class);
         if (requestMapping != null &&
                 (requestMapping.method().length == 0 ||
@@ -59,6 +62,7 @@ public class CustomizedCircuitBreakerAspect {
             retry = retryRegistry.retry(serviceName);
         }
         if (!isGet) {
+            //非GET请求，只有在断路器打开的情况下，才会重试
             retry = Retry.of(serviceName, RetryConfig.from(retry.getRetryConfig()).retryExceptions().retryOnException(throwable -> {
                 Throwable cause = throwable.getCause();
                 if (cause instanceof CallNotPermittedException) {
@@ -69,6 +73,7 @@ public class CustomizedCircuitBreakerAspect {
                 return false;
             }).build());
         }
+        //对于GET请求，启用重试机制
         Supplier<Object> objectSupplier = Retry.decorateSupplier(retry, () -> {
             try {
                 return pjp.proceed();
