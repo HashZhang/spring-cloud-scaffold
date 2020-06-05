@@ -112,7 +112,6 @@ resilience4j.circuitbreaker:
       automaticTransitionFromOpenToHalfOpenEnabled: true
       waitDurationInOpenState: 2s
       failureRateThreshold: 30
-      eventConsumerBufferSize: 10
       recordExceptions:
         - java.lang.Exception
 resilience4j.retry:
