@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Log4j2
 public class RoundRobinBaseOnTraceIdLoadBalancer implements ReactorServiceInstanceLoadBalancer {
     //这个超时时间，需要设置的比你的请求的 connectTimeout + readTimeout 长
-    private final LoadingCache<Long, AtomicInteger> positionCache = Caffeine.newBuilder().expireAfterWrite(3, TimeUnit.SECONDS).build(k -> new AtomicInteger(ThreadLocalRandom.current().nextInt(0, 1000)));
+    private final LoadingCache<Long, AtomicInteger> positionCache = Caffeine.newBuilder().expireAfterWrite(60, TimeUnit.SECONDS).build(k -> new AtomicInteger(ThreadLocalRandom.current().nextInt(0, 1000)));
     private final String serviceId;
     private final ServiceInstanceListSupplier serviceInstanceListSupplier;
     private final Tracer tracer;

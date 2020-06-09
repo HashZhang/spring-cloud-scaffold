@@ -117,7 +117,7 @@ resilience4j.circuitbreaker:
 resilience4j.retry:
   configs:
     default:
-      maxRetryAttempts: 1
+      maxRetryAttempts: 2
       waitDuration: 1
       retryExceptions:
         - java.lang.Exception

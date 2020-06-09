@@ -112,6 +112,7 @@ public class LoadBalancerConfig {
                         try (Tracer.SpanInScope cleared = tracer.withSpanInScope(span)) {
                             log.info("call url: {} -> {}", request.httpMethod(), request.url());
                             Response execute = super.execute(request, options);
+                            //对于非返回200的接口，抛出异常
                             if (execute.status() != HttpStatus.OK.value()) {
                                 throw new ResponseWrapperException(execute.toString(), execute);
                             }
