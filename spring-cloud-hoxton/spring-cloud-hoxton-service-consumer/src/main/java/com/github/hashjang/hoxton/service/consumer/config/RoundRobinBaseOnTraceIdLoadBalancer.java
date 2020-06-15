@@ -61,6 +61,10 @@ public class RoundRobinBaseOnTraceIdLoadBalancer implements ReactorServiceInstan
         }
         long l = currentSpan.context().traceId();
         int seed = positionCache.get(l).getAndIncrement();
+        //这里，serviceInstances可能与上次的内容不同
+        //例如上次是实例1，实例2
+        //这次是实例2，实例1
+        //所以，加上排序，进一步保证不会重试相同实例
         return new DefaultResponse(serviceInstances.stream().sorted(Comparator.comparing(ServiceInstance::getInstanceId)).collect(Collectors.toList()).get(seed % serviceInstances.size()));
     }
 }
