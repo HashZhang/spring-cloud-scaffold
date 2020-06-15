@@ -14,10 +14,12 @@ import org.springframework.cloud.loadbalancer.core.ReactorServiceInstanceLoadBal
 import org.springframework.cloud.loadbalancer.core.ServiceInstanceListSupplier;
 import reactor.core.publisher.Mono;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * A Round-Robin-based implementation of {@link org.springframework.cloud.loadbalancer.core.ReactorServiceInstanceLoadBalancer}.
@@ -59,6 +61,6 @@ public class RoundRobinBaseOnTraceIdLoadBalancer implements ReactorServiceInstan
         }
         long l = currentSpan.context().traceId();
         int seed = positionCache.get(l).getAndIncrement();
-        return new DefaultResponse(serviceInstances.get(seed % serviceInstances.size()));
+        return new DefaultResponse(serviceInstances.stream().sorted(Comparator.comparing(ServiceInstance::getInstanceId)).collect(Collectors.toList()).get(seed % serviceInstances.size()));
     }
 }
