@@ -40,8 +40,10 @@ public class WebClientConfig {
                 .maxConnections(50).pendingAcquireTimeout(Duration.ofSeconds(5)).build();
         HttpClient httpClient = HttpClient.create(provider)
                 .tcpConfiguration(client ->
+                        //链接超时
                         client.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 500)
                                 .doOnConnected(conn -> conn
+                                        //读取超时
                                         .addHandlerLast(new ReadTimeoutHandler(1))
                                         .addHandlerLast(new WriteTimeoutHandler(1))
                                 )
@@ -51,6 +53,7 @@ public class WebClientConfig {
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
                 //Retry在负载均衡前
                 .filter(new RetryFilter(SERVICE_PROVIDER))
+                //负载均衡器，改写url
                 .filter(lbFunction)
                 //实例级别的断路器需要在负载均衡获取真正地址之后
                 .filter(new InstanceCircuitBreakerFilter(SERVICE_PROVIDER, circuitBreakerRegistry))
@@ -73,6 +76,7 @@ public class WebClientConfig {
                 return clientRequest.method().equals(HttpMethod.GET)
                         //connect Timeout 是一种 IOException
                         || retryContext.exception() instanceof IOException
+                        //实例级别的断路器的Exception
                         || retryContext.exception() instanceof CallNotPermittedException;
             }).retryMax(1).exponentialBackoff(Duration.ofMillis(100), Duration.ofMillis(1000)));
         }
@@ -91,6 +95,7 @@ public class WebClientConfig {
         @Override
         public Mono<ClientResponse> filter(ClientRequest clientRequest, ExchangeFunction exchangeFunction) {
             CircuitBreaker circuitBreaker;
+            //这时候的url是经过负载均衡器的，是实例的url
             String instancId = clientRequest.url().getHost() + ":" + clientRequest.url().getPort();
             try {
                 //使用实例id新建或者获取现有的CircuitBreaker,使用serviceName获取配置
