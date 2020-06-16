@@ -27,12 +27,15 @@ public class RetryGatewayFilter extends RetryGatewayFilterFactory implements Glo
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
+        //获取微服务名称
         String serviceName = request.getHeaders().getFirst(CommonConstant.SERVICE_NAME);
         Map<String, RetryConfig> retryConfigMap = apiGatewayRetryConfig.getRetry();
+        //通过微服务名称，获取重试配置
         RetryConfig retryConfig = retryConfigMap.containsKey(serviceName) ? retryConfigMap.get(serviceName) : apiGatewayRetryConfig.getDefault();
         if (retryConfig.getRetries() == 0) {
             return chain.filter(exchange);
         }
+        //生成 GatewayFilter,保存到 gatewayFilterMap
         GatewayFilter gatewayFilter = gatewayFilterMap.computeIfAbsent(serviceName, k -> this.apply(retryConfig));
         return gatewayFilter.filter(exchange, chain);
     }

@@ -44,6 +44,7 @@ public class InstanceCircuitBreakerFilter implements GlobalFilter, Ordered {
         String instanceId = url.getHost() + url.getPort();
         CircuitBreaker circuitBreaker;
         try {
+            //使用实例id新建或者获取现有的CircuitBreaker,使用serviceName获取配置
             circuitBreaker = circuitBreakerRegistry.circuitBreaker(instanceId, serviceName);
         } catch (ConfigurationNotFoundException e) {
             circuitBreaker = circuitBreakerRegistry.circuitBreaker(instanceId);
@@ -60,6 +61,7 @@ public class InstanceCircuitBreakerFilter implements GlobalFilter, Ordered {
     @Override
     public int getOrder() {
         try {
+            //必须在负载均衡器选择实例并重写调用 url 之后，也就是在 `ReactiveLoadBalancerClientFilter` 之后。
             return (Integer) ReactiveLoadBalancerClientFilter.class.getDeclaredField("LOAD_BALANCER_CLIENT_FILTER_ORDER").get(null) + 1;
         } catch (Exception e) {
             return 10151;
