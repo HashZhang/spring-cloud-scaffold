@@ -3,7 +3,7 @@ package com.github.hashjang.hoxton.webflux.config;
 import brave.Tracer;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.cloud.client.ServiceInstance;
-import org.springframework.cloud.client.discovery.DiscoveryClient;
+import org.springframework.cloud.client.discovery.ReactiveDiscoveryClient;
 import org.springframework.cloud.loadbalancer.cache.LoadBalancerCacheManager;
 import org.springframework.cloud.loadbalancer.config.LoadBalancerZoneConfig;
 import org.springframework.cloud.loadbalancer.core.CachingServiceInstanceListSupplier;
@@ -34,7 +34,7 @@ public class CommonLoadBalancerConfig {
     @Bean
     @Order(Integer.MIN_VALUE)
     public ServiceInstanceListSupplier discoveryClientServiceInstanceListSupplier(
-            DiscoveryClient discoveryClient, Environment env,
+            ReactiveDiscoveryClient discoveryClient, Environment env,
             LoadBalancerZoneConfig zoneConfig,
             ApplicationContext context) {
         isValid = true;
