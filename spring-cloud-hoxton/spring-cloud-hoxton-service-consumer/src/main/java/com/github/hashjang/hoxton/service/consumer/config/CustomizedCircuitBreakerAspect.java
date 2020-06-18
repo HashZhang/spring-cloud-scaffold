@@ -8,6 +8,7 @@ import io.github.resilience4j.retry.RetryRegistry;
 import io.vavr.control.Try;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.conn.ConnectTimeoutException;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -68,6 +69,10 @@ public class CustomizedCircuitBreakerAspect {
                 if (cause instanceof CallNotPermittedException) {
                     //对于断路器，不区分方法，都重试，因为没有实际调用
                     log.info("retry on circuit breaker is on: {}", cause.getMessage());
+                    return true;
+                } else if (cause instanceof ConnectTimeoutException) {
+                    //对于ConnectTimeout，也重试
+                    log.info("retry on connect timeout: {}", cause.getMessage());
                     return true;
                 }
                 return false;
