@@ -93,16 +93,9 @@ public class EncryptFilter extends AbstractSpecificPathFilter {
                             //有TCP粘包拆包问题，这个body是多次写入的，一次调用拿不到完整的body，所以这里转换成fluxBody利用其中的buffer来接受完整的body
                             Flux<? extends DataBuffer> fluxBody = Flux.from(body);
                             return super.writeWith(fluxBody.buffer().map(buffers -> {
-                                StringBuilder stringBuilder = new StringBuilder();
-                                buffers.forEach(dataBuffer -> {
-                                    try {
-                                        stringBuilder.append(FilterUtil.dataBufferToString(dataBuffer));
-                                    } catch (Exception e) {
-                                        log.error("error while collect response: {}", e.getMessage(), e);
-                                    }
-                                });
+                                DataBuffer buffer = bufferFactory.join(buffers);
                                 try {
-                                    String s = stringBuilder.toString();
+                                    String s = FilterUtil.dataBufferToString(buffer);
                                     log.info("encrypt response: {}", s);
                                     byte[] uppedContent = encrypt0(exchange, s, decryptResult.getKey()).getBytes();
                                     return bufferFactory.wrap(uppedContent);
