@@ -8,7 +8,6 @@ import io.github.resilience4j.retry.RetryRegistry;
 import io.vavr.control.Try;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang.StringUtils;
-import org.apache.http.conn.ConnectTimeoutException;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -20,6 +19,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.function.Supplier;
 
@@ -66,14 +66,17 @@ public class CustomizedCircuitBreakerAspect {
             //非GET请求，只有在断路器打开的情况下，才会重试
             retry = Retry.of(serviceName, RetryConfig.from(retry.getRetryConfig()).retryExceptions().retryOnException(throwable -> {
                 Throwable cause = throwable.getCause();
-                if (cause instanceof CallNotPermittedException) {
-                    //对于断路器，不区分方法，都重试，因为没有实际调用
-                    log.info("retry on circuit breaker is on: {}", cause.getMessage());
-                    return true;
-                } else if (cause instanceof ConnectTimeoutException) {
-                    //对于ConnectTimeout，也重试
-                    log.info("retry on connect timeout: {}", cause.getMessage());
-                    return true;
+                while (cause != null) {
+                    if (cause instanceof CallNotPermittedException) {
+                        //对于断路器，不区分方法，都重试，因为没有实际调用
+                        log.info("retry on circuit breaker is on: {}", cause.getMessage());
+                        return true;
+                    } else if (cause instanceof IOException) {
+                        //对于ConnectTimeout，也重试
+                        log.info("retry on connect timeout: {}", cause.getMessage());
+                        return true;
+                    }
+                    cause = cause.getCause();
                 }
                 return false;
             }).build());
