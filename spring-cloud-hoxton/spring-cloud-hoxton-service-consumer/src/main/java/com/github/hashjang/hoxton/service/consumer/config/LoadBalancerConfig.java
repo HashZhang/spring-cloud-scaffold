@@ -114,6 +114,7 @@ public class LoadBalancerConfig {
                             Response execute = super.execute(request, options);
                             //对于非返回200的接口，抛出异常
                             if (execute.status() != HttpStatus.OK.value()) {
+                                execute.close();
                                 throw new ResponseWrapperException(execute.toString(), execute);
                             }
                             return execute;
