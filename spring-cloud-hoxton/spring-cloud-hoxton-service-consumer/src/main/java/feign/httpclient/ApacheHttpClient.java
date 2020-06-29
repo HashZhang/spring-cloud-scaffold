@@ -96,6 +96,7 @@ public class ApacheHttpClient implements Client {
                         : RequestConfig.custom())
                         .setConnectTimeout(options.connectTimeoutMillis())
                         .setSocketTimeout(options.readTimeoutMillis())
+                        .setConnectionRequestTimeout(options.connectTimeoutMillis())
                         .build();
         requestBuilder.setConfig(requestConfig);
 
