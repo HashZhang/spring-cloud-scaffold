@@ -28,6 +28,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
@@ -89,21 +90,21 @@ public class LoadBalancerConfig {
         @Override
         public Response execute(Request request, Request.Options options) throws IOException {
             String serviceName = request.requestTemplate().feignTarget().name();
-            URL url = new URL(request.url());
-            String instanceId = serviceName + ":" + url.getHost() + ":" + url.getPort();
-
-            //每个实例一个resilience4j熔断记录器，在实例维度做熔断，所有这个服务的实例共享这个服务的resilience4j熔断配置
+            String serviceInstanceId = getServiceInstanceId(request);
+            String serviceInstanceMethodId = getServiceInstanceMethodId(request);
             ThreadPoolBulkhead threadPoolBulkhead;
             CircuitBreaker circuitBreaker;
             try {
-                threadPoolBulkhead = threadPoolBulkheadRegistry.bulkhead(instanceId, serviceName);
+                //每个实例一个线程池
+                threadPoolBulkhead = threadPoolBulkheadRegistry.bulkhead(serviceInstanceId, serviceName);
             } catch (ConfigurationNotFoundException e) {
-                threadPoolBulkhead = threadPoolBulkheadRegistry.bulkhead(instanceId);
+                threadPoolBulkhead = threadPoolBulkheadRegistry.bulkhead(serviceInstanceId);
             }
             try {
-                circuitBreaker = circuitBreakerRegistry.circuitBreaker(instanceId, serviceName);
+                //每个服务实例具体方法一个resilience4j熔断记录器，在服务实例具体方法维度做熔断，所有这个服务的实例具体方法共享这个服务的resilience4j熔断配置
+                circuitBreaker = circuitBreakerRegistry.circuitBreaker(serviceInstanceMethodId, serviceName);
             } catch (ConfigurationNotFoundException e) {
-                circuitBreaker = circuitBreakerRegistry.circuitBreaker(instanceId);
+                circuitBreaker = circuitBreakerRegistry.circuitBreaker(serviceInstanceMethodId);
             }
             //保持traceId
             Span span = tracer.currentSpan();
@@ -136,6 +137,20 @@ public class LoadBalancerConfig {
                 }
                 throw new ResponseWrapperException(cause.getMessage(), cause);
             }
+        }
+
+        private String getServiceInstanceId(Request request) throws MalformedURLException {
+            String serviceName = request.requestTemplate().feignTarget().name();
+            URL url = new URL(request.url());
+            return serviceName + ":" + url.getHost() + ":" + url.getPort();
+        }
+
+        private String getServiceInstanceMethodId(Request request) throws MalformedURLException {
+            String serviceName = request.requestTemplate().feignTarget().name();
+            URL url = new URL(request.url());
+            //通过微服务名称 + 实例 + 方法的方式，获取唯一id
+            String methodName = request.requestTemplate().methodMetadata().method().toGenericString();
+            return serviceName + ":" + url.getHost() + ":" + url.getPort() + ":" + methodName;
         }
     }
 }
