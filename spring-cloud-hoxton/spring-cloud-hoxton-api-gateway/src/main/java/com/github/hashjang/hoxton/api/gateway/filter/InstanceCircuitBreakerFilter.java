@@ -41,7 +41,7 @@ public class InstanceCircuitBreakerFilter implements GlobalFilter, Ordered {
         URI url = exchange.getAttribute(GATEWAY_REQUEST_URL_ATTR);
         ServerHttpRequest request = exchange.getRequest();
         String serviceName = request.getHeaders().getFirst(CommonConstant.SERVICE_NAME);
-        String instanceId = url.getHost() + ":" + url.getPort() + url.getPath();
+        String instanceId = url.getHost() + ":" + url.getPort();
         CircuitBreaker circuitBreaker;
         try {
             //使用实例id新建或者获取现有的CircuitBreaker,使用serviceName获取配置
