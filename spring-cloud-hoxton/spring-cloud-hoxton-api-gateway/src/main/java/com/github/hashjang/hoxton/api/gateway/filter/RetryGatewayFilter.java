@@ -38,31 +38,32 @@ public class RetryGatewayFilter extends RetryGatewayFilterFactory implements Glo
         ServerHttpRequest request = exchange.getRequest();
         //获取微服务名称
         String serviceName = request.getHeaders().getFirst(CommonConstant.SERVICE_NAME);
-        Map<String, RetryConfig> retryConfigMap = apiGatewayRetryConfig.getRetry();
-        //通过微服务名称，获取重试配置
-        RetryConfig retryConfig = retryConfigMap.containsKey(serviceName) ? retryConfigMap.get(serviceName) : apiGatewayRetryConfig.getDefault();
-        //重试次数为0，则不重试
-        if (retryConfig.getRetries() == 0) {
-            return chain.filter(exchange);
-        }
-        //针对非GET请求，强制限制重试并且只能重试下面的异常b
         HttpMethod method = exchange.getRequest().getMethod();
-        if (!HttpMethod.GET.equals(method)) {
-            RetryConfig newConfig = new RetryConfig();
-            BeanUtils.copyProperties(retryConfig, newConfig);
-            newConfig.setSeries();
-            newConfig.setStatuses();
-            newConfig.setExceptions(//链接超时
-                    io.netty.channel.ConnectTimeoutException.class,
-                    //No route to host
-                    java.net.ConnectException.class,
-                    //针对Resilience4j的异常
-                    CallNotPermittedException.class);
-            retryConfig = newConfig;
-        }
         //生成 GatewayFilter,保存到 gatewayFilterMap
-        RetryConfig finalRetryConfig = retryConfig;
-        GatewayFilter gatewayFilter = gatewayFilterMap.computeIfAbsent(serviceName + ":" + method, k -> this.apply(finalRetryConfig));
-        return gatewayFilter.filter(exchange, chain);
+        GatewayFilter gatewayFilter = gatewayFilterMap.computeIfAbsent(serviceName + ":" + method, k -> {
+            Map<String, RetryConfig> retryConfigMap = apiGatewayRetryConfig.getRetry();
+            //通过微服务名称，获取重试配置
+            RetryConfig retryConfig = retryConfigMap.containsKey(serviceName) ? retryConfigMap.get(serviceName) : apiGatewayRetryConfig.getDefault();
+            //重试次数为0，则不重试
+            if (retryConfig.getRetries() == 0) {
+                return null;
+            }
+            //针对非GET请求，强制限制重试并且只能重试下面的异常b
+            if (!HttpMethod.GET.equals(method)) {
+                RetryConfig newConfig = new RetryConfig();
+                BeanUtils.copyProperties(retryConfig, newConfig);
+                newConfig.setSeries();
+                newConfig.setStatuses();
+                newConfig.setExceptions(//链接超时
+                        io.netty.channel.ConnectTimeoutException.class,
+                        //No route to host
+                        java.net.ConnectException.class,
+                        //针对Resilience4j的异常
+                        CallNotPermittedException.class);
+                retryConfig = newConfig;
+            }
+            return this.apply(retryConfig);
+        });
+        return gatewayFilter != null ? gatewayFilter.filter(exchange, chain) : chain.filter(exchange);
     }
 }
