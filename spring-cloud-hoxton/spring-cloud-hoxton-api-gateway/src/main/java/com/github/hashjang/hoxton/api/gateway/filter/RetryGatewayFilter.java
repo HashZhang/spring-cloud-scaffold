@@ -52,6 +52,7 @@ public class RetryGatewayFilter extends RetryGatewayFilterFactory implements Glo
             if (!HttpMethod.GET.equals(method)) {
                 RetryConfig newConfig = new RetryConfig();
                 BeanUtils.copyProperties(retryConfig, newConfig);
+                newConfig.setMethods(HttpMethod.values());
                 newConfig.setSeries();
                 newConfig.setStatuses();
                 newConfig.setExceptions(//链接超时
