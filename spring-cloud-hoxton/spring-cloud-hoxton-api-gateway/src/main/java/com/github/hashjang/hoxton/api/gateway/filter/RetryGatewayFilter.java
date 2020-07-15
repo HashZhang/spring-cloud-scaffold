@@ -3,10 +3,6 @@ package com.github.hashjang.hoxton.api.gateway.filter;
 import com.github.hashjang.hoxton.api.gateway.common.CommonConstant;
 import com.github.hashjang.hoxton.api.gateway.config.ApiGatewayRetryConfig;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
@@ -21,17 +17,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.sql.Timestamp;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Component
 public class RetryGatewayFilter extends RetryGatewayFilterFactory implements GlobalFilter, Ordered {
@@ -39,34 +26,6 @@ public class RetryGatewayFilter extends RetryGatewayFilterFactory implements Glo
     private final Map<String, GatewayFilter> gatewayFilterMap = new ConcurrentHashMap<>();
     @Autowired
     private ApiGatewayRetryConfig apiGatewayRetryConfig;
-
-    public static void main(String[] args) throws URISyntaxException {
-        Path path = Paths.get(RetryGatewayFilter.class.getClassLoader()
-                .getResource("test.log").toURI());
-        try (Stream<String> lines = Files.lines(path)) {
-
-            List<String[]> originData = lines.map(data -> data.split(" ")).collect(Collectors.toList());
-
-            List<String[]> requests = originData.stream().filter(data -> data[6].contains("CommonLogFilter:42")).collect(Collectors.toList());
-            List<String[]> responses = originData.stream().filter(data -> data[6].contains("CommonLogFilter$1:68")).collect(Collectors.toList());
-
-            Map<String, String[]> responsesMap = responses.stream().collect(Collectors.toMap(strings -> strings[4], strings -> strings, (v1, v2) -> v1));
-
-            requests.forEach(request -> {
-                Timestamp requestTime = Timestamp.valueOf(request[0] + " " + request[1]);
-                String[] response = responsesMap.get(request[4]);
-                if (response != null) {
-                    Timestamp responseTime = Timestamp.valueOf(response[0] + " " + response[1]);
-                    System.out.println(request[1] + ":" + request[4] + ":" + request[7] + ":" + (responseTime.getTime() - requestTime.getTime()));
-                } else {
-                    System.out.println(request[1] + ":" + request[4] + ":" + request[7]);
-                }
-            });
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 
     @Override
     public int getOrder() {
@@ -105,14 +64,5 @@ public class RetryGatewayFilter extends RetryGatewayFilterFactory implements Glo
         RetryConfig finalRetryConfig = retryConfig;
         GatewayFilter gatewayFilter = gatewayFilterMap.computeIfAbsent(serviceName + ":" + method, k -> this.apply(finalRetryConfig));
         return gatewayFilter.filter(exchange, chain);
-    }
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    private static class Count {
-        private String k;
-        private long v;
     }
 }
