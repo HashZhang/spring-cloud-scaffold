@@ -36,8 +36,11 @@ public class FilterUtil {
 
     public static String dataBufferToString(DataBuffer dataBuffer) throws IOException {
         byte[] content = new byte[dataBuffer.readableByteCount()];
-        dataBuffer.read(content);
-        DataBufferUtils.release(dataBuffer);
+        try {
+            dataBuffer.read(content);
+        } finally {
+            DataBufferUtils.release(dataBuffer);
+        }
         return new String(content);
     }
 }
