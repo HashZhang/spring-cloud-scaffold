@@ -1,12 +1,4 @@
-app:
-  biz:
-    country-code: ng
-    is-test: true
-
 spring:
-  redis:
-    host: ng-test-redis1.s.hopegaming
-    port: 6379
   application:
     # 应用名称
     name: service-consumer
