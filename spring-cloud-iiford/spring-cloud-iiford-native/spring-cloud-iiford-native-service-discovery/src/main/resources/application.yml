@@ -2,7 +2,7 @@ spring:
   cloud:
     discovery:
       client:
-        # SimpleDiscoveryClient的配置
+        # SimpleDiscoveryClient与SimpleReactiveDiscoveryClient的配置
         simple:
           instances:
             #微服务1
@@ -10,7 +10,8 @@ spring:
               #实例1
               - host: instance1 #地址
                 port: 8080 #端口
-                instanceId: 'instance:8080' #可以不填，实例id
+                isSecure: true
+                instanceId: 'instance1:8080' #可以不填，实例id
               #实例2
               - uri: 'https://instance2:443' #指定了 scheme 为 https，host 为 instance2，端口为443
             #微服务2
