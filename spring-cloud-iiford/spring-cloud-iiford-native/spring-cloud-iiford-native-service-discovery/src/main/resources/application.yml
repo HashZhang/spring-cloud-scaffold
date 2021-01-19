@@ -1,0 +1,40 @@
+spring:
+  cloud:
+    discovery:
+      client:
+        # SimpleDiscoveryClient的配置
+        simple:
+          instances:
+            #微服务1
+            service1:
+              #实例1
+              - host: instance1 #地址
+                port: 8080 #端口
+                instanceId: 'instance:8080' #可以不填，实例id
+              #实例2
+              - uri: 'https://instance2:443' #指定了 scheme 为 https，host 为 instance2，端口为443
+            #微服务2
+            service2:
+              #实例3
+              - host: instance3 #地址
+                port: 80 #端口
+                instanceId: ${spring.cloud.discovery.client.simple.instances.service2[0].host}:${spring.cloud.discovery.client.simple.instances.service2[0].port} #可以不填，实例id
+              #实例4
+              - uri: 'https://instance4:8080' #指定了 scheme 为 https，host 为 instance4，端口为8080
+          # 指定 SimpleDiscoveryClient的排序顺序为1，默认是0，越小越优先
+          order: 1
+# actuator 配置
+management:
+  endpoint:
+    health:
+      # health 接口总是输出详细信息
+      show-details: always
+  endpoints:
+    jmx:
+      exposure:
+        # jmx 不暴露任何 actuator 接口
+        exclude: '*'
+    web:
+      exposure:
+        # http 暴露所有 actuator 接口
+        include: '*'
