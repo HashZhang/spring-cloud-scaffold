@@ -1,13 +1,17 @@
-package com.github.hashjang.spring.cloud.iiford.service.discovery.simple;
+package com.github.hashjang.alibaba.service.provider.discovery;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.cloud.client.discovery.simple.SimpleDiscoveryClient;
+import org.springframework.cloud.client.ServiceInstance;
+import org.springframework.cloud.client.discovery.DiscoveryClient;
+import org.springframework.cloud.client.loadbalancer.LoadBalancerClient;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 通过消费 ApplicationReadyEvent 来确保 DiscoveryClient 初始化完成并可用
@@ -24,13 +28,15 @@ public class TestSimpleDiscoveryClient implements ApplicationListener<Applicatio
      * @see org.springframework.cloud.client.discovery.simple.SimpleDiscoveryClientAutoConfiguration
      */
     @Resource
-    private SimpleDiscoveryClient simpleDiscoveryClient;
+    private DiscoveryClient discoveryClient;
+    @Autowired
+    private LoadBalancerClient loadBalancerClient;
 
     @Override
     public void onApplicationEvent(ApplicationReadyEvent applicationReadyEvent) {
-        List<String> services = simpleDiscoveryClient.getServices();
+        List<String> services = discoveryClient.getServices();
         services.forEach(serviceId -> {
-            log.info("{}: {}", serviceId, simpleDiscoveryClient.getInstances(serviceId));
+            log.info("{}: {}", serviceId, discoveryClient.getInstances(serviceId).stream().map(serviceInstance -> serviceInstance.getHost() + ":" + serviceInstance.getPort()).collect(Collectors.joining()));
         });
     }
 }
