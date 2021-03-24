@@ -1,4 +1,5 @@
 # AutoConfiguration
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
 com.github.hashjang.spring.cloud.iiford.service.common.auto.LoadBalancerAutoConfiguration,\
-com.github.hashjang.spring.cloud.iiford.service.common.auto.OpenFeignAutoConfiguration
+com.github.hashjang.spring.cloud.iiford.service.common.auto.OpenFeignAutoConfiguration,\
+com.github.hashjang.spring.cloud.iiford.service.common.auto.UndertowAutoConfiguration

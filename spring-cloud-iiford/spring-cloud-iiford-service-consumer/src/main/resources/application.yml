@@ -4,19 +4,25 @@ spring:
   application:
     # 应用名称
     name: service-consumer
-  # 不启用ribbon-loadbalancer，这样就会用
+  # 不启用 ribbon-loadbalancer，这样就会用
   cloud:
     loadbalancer:
       retry:
-        # 不用loadbalancer自带的retry，用我们自己的resilience4j的retry
+        # 不用loadbalancer自带的retry，用我们自己的 resilience4j 的 retry
         enabled: false
       ribbon:
         enabled: false
       cache:
         # 本地微服务实例列表缓存时间
-        ttl: 1
+        ttl: 1s
         # 缓存大小，你的微服务调用多少个其他微服务，大小就设置为多少，默认256
         capacity: 256
+    discovery:
+      client:
+        health-indicator:
+          # health 与 discoverClient 的健康状态无关
+          # 这样即使注册中心挂了，也不会导致所有实例的健康检查失败
+          enabled: false
 server:
   port: 8102
   undertow:
@@ -27,9 +33,11 @@ server:
       # 是否开启
       enabled: true
       # 格式
-      pattern: '[%{time,yyyy-MM-dd HH:mm:ss.S z}] %m %U "%q" %s %D %b %{i,X-B3-TraceId},%{i,X-B3-SpanId}
-                %{i,X-Real-IP} %{i,Referer} "%{i,User-Agent}" %{i,Platform} %l %u
-                %I %v %a'
+      pattern: '{"time":"%{time,yyyy-MM-dd HH:mm:ss.S}","method":"%m","uri":"%U",
+                 "params":"%q","responseStatus":"%s","responseTime":"%D","responseSize":"%b",
+                 "traceId":"%{i,traceId}","spanId":"%{i,spanId}","ip":"%{i,X-Real-IP}",
+                 "referer":"%{i,Referer}","userAgent":"%{i,User-Agent}","platform":"%{i,Platform}",
+                 "thread":"%I", "localhost":"%{HOST_AND_PORT}"}'
       # 文件前缀
       prefix: access.
     # 以下的配置会影响buffer,这些buffer会用于服务器连接的IO操作,有点类似netty的池化内存管理
@@ -39,11 +47,12 @@ server:
     buffer-size: 128
     # 是否分配的直接内存(NIO直接分配的堆外内存)，这里开启，所以java启动参数需要配置下直接内存大小，减少不必要的GC
     directBuffers: true
-    # 设置IO线程数, 它主要执行非阻塞的任务,它们会负责多个连接, 默认设置每个CPU核心一个线程
-    io-threads: 32
-    # 阻塞任务线程池, 当执行类似servlet请求阻塞IO操作, undertow会从这个线程池中取得线程
-    # 它的值设置取决于系统线程执行任务的阻塞系数，默认值是IO线程数*8
-    worker-threads: 512
+    threads:
+      # 设置IO线程数, 它主要执行非阻塞的任务,它们会负责多个连接, 默认设置每个CPU核心一个线程
+      io: 16
+      # 阻塞任务线程池, 当执行类似servlet请求阻塞IO操作, undertow会从这个线程池中取得线程
+      # 它的值设置取决于系统线程执行任务的阻塞系数，默认值是IO线程数*8
+      worker: 128
 
 # actuator设置
 management:
@@ -67,10 +76,14 @@ eureka:
     # 默认30s
     registry-fetch-interval-seconds: 5
     service-url:
-      # 默认eureka集群, 这里一定不能用中划线，因为是map的key
+      # 默认eureka集群, 这里和其他配置不一样，不能用中划线替代驼峰配置，因为是map的key
       defaultZone: http://127.0.0.1:8211/eureka/
+    # 是否注册将本实例到 Eureka，默认为 true，这里写这个配置主要为了测试的时候改成 false 方便
     register-with-eureka: true
+    # 是否注册从 Eureka 读取实例，默认为 true，这里写这个配置主要为了测试的时候改成 false 方便
     fetch-registry: true
+    # 实例信息同步到 Eureka 初始时间间隔
+    initial-instance-info-replication-interval-seconds:
   instance:
     lease-expiration-duration-in-seconds: 15
     lease-renewal-interval-in-seconds: 5
@@ -92,15 +105,31 @@ eureka:
     non-secure-port: ${server.port}
 feign:
   hystrix:
+    # 关闭 hystrix 断路器
     enabled: false
   client:
     config:
       default:
+        # 连接超时 200ms
         connectTimeout: 200
+        # 请求响应超时 3000ms
         readTimeout: 3000
       service-provider2:
+        # 连接超时 100ms
         connectTimeout: 100
-        readTimeout: 1000
+        # 请求响应超时 1000ms
+        readTimeout: 10000
+  compression:
+    request:
+      # feign 开启请求压缩
+      enabled: true
+      # feign 压缩请求最小大小，超过这个大小才会压缩
+      min-request-size: 2048
+    response:
+      # feign 开启响应压缩
+      enabled: true
+      # 使用 gzip
+      useGzipDecoder: true
 
 resilience4j.circuitbreaker:
   configs:
@@ -145,10 +174,15 @@ resilience4j.circuitbreaker:
 resilience4j.retry:
   configs:
     default:
+      # 单次请求最大调用次数，这里配置就是本身调用一次，失败后最多重试 2 次
       maxAttempts: 3
+      # 等待时间基准
       waitDuration: 500ms
+      # 启用随机时间，在这种配置下，每次重试等待时间 = 随机 waitDuration*(1-randomizedWaitFactor) ~ waitDuration*(1+randomizedWaitFactor) 的一个值
       enableRandomizedWait: true
+      # 等待时间随机偏移比例
       randomizedWaitFactor: 0.9
+      # 判断哪些异常可以重试的 Predicate 函数式接口实现
       retryExceptionPredicate: com.github.hashjang.spring.cloud.iiford.service.common.feign.DefaultRetryOnExceptionPredicate
     service-provider2:
       maxRetryAttempts: 4
@@ -156,11 +190,14 @@ resilience4j.retry:
 resilience4j.thread-pool-bulkhead:
   configs:
     default:
-      maxThreadPoolSize: 50
+      # 最大线程数量
+      maxThreadPoolSize: 25
+      # 核心线程数量
       coreThreadPoolSize: 10
       # 一个实例一个线程池，这样队列长度不用而且也不能太长，否则在忙时更容易出现雪崩
       # 通过限制这个队列大小其实也是限制了一个微服务实例调用另一个实例的时候的流量
-      # 我们这里设置为 1，表示最多只能同时有50个并发，并且有50个并发的时候最多只有一个等待，防止雪崩。
+      # 我们这里设置为 1，表示最多只能同时有25个并发，并且有25个并发的时候最多只有一个等待，防止雪崩。
       queueCapacity: 1
+      # 超过核心线程数量线程存活时间
       keepAliveDuration: 5m
 

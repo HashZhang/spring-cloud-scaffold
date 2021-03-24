@@ -8,12 +8,12 @@
         <Property name="LOG_LEVEL_PATTERN">%5p</Property>
         <Property name="LOG_DATEFORMAT_PATTERN">yyyy-MM-dd HH:mm:ss.SSS</Property>
         <Property name="logFormat">
-            %d{${LOG_DATEFORMAT_PATTERN}} ${LOG_LEVEL_PATTERN} [${springAppName},%X{X-B3-TraceId},%X{X-B3-SpanId}]
+            %d{${LOG_DATEFORMAT_PATTERN}} ${LOG_LEVEL_PATTERN} [${springAppName},%X{traceId},%X{spanId}]
             [${sys:PID}] [%t][%C:%L]: %m%n${sys:LOG_EXCEPTION_CONVERSION_WORD}
         </Property>
         <Property name="CONSOLE_LOG_PATTERN">
             %clr{%d{${LOG_DATEFORMAT_PATTERN}}}{faint} %clr{${LOG_LEVEL_PATTERN}}
-            [${springAppName},%X{X-B3-TraceId},%X{X-B3-SpanId}] %clr{[${sys:PID}]}{magenta}
+            [${springAppName},%X{traceId},%X{spanId}] %clr{[${sys:PID}]}{magenta}
             %clr{[%t]}{faint}%clr{[%C:%L]}{cyan}%clr{:}{faint}%m%n${sys:LOG_EXCEPTION_CONVERSION_WORD}
         </Property>
     </Properties>
