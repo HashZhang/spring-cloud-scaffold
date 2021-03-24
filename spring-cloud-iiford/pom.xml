@@ -3,12 +3,54 @@
          xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>spring-cloud-scaffold</artifactId>
-        <groupId>com.github.hashjang</groupId>
-        <version>1.0-SNAPSHOT</version>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.4.4</version>
     </parent>
+
     <modelVersion>4.0.0</modelVersion>
 
+    <groupId>com.github.hashjang</groupId>
     <artifactId>spring-cloud-iiford</artifactId>
+    <packaging>pom</packaging>
+    <version>1.0-SNAPSHOT</version>
+    <modules>
+        <module>spring-cloud-iiford-common</module>
+        <module>spring-cloud-iiford-service-common</module>
+        <module>spring-cloud-iiford-eureka-server</module>
+        <module>spring-cloud-iiford-service-provider</module>
+        <module>spring-cloud-iiford-service-consumer</module>
+    </modules>
 
+    <properties>
+        <project.version>1.0-SNAPSHOT</project.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>2020.0.2</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.6.1</version>
+                <configuration>
+                    <!--最好用JDK 12版本及以上编译，11.0.7对于spring-cloud-gateway有时候编译会有bug-->
+                    <!--虽然官网说已解决，但是11.0.7还是偶尔会出现-->
+                    <source>11</source>
+                    <target>11</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>
