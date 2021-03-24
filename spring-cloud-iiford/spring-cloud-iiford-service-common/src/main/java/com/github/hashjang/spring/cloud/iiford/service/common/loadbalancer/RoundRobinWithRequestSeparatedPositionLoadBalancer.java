@@ -71,9 +71,11 @@ public class RoundRobinWithRequestSeparatedPositionLoadBalancer implements React
         long l = currentSpan.context().traceId();
         AtomicInteger seed = positionCache.get(l);
         int s = seed.getAndIncrement();
+        int pos = s % serviceInstances.size();
+        log.info("position {}, seed: {}, instances count: {}", pos, s, serviceInstances.size());
         return new DefaultResponse(serviceInstances.stream()
                 //实例返回列表顺序可能不同，为了保持一致，先排序再取
                 .sorted(Comparator.comparing(ServiceInstance::getInstanceId))
-                .collect(Collectors.toList()).get(s % serviceInstances.size()));
+                .collect(Collectors.toList()).get(pos));
     }
 }
