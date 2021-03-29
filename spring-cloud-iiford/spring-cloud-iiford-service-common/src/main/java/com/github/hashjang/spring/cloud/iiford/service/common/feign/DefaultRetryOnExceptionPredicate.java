@@ -31,7 +31,7 @@ public class DefaultRetryOnExceptionPredicate implements Predicate<Throwable> {
                 if (containsRead) {
                     log.info("{}-{} exception contains read, which indicates the request has been sent", e.getMessage(), cause.getMessage());
                     //如果是 read 异常，只有是 query 请求才可以重试
-                    shouldRetry = RetryUtil.isQueryRequest(e.request());
+                    shouldRetry = OpenfeignUtil.isRetryableRequest(e.request());
                 } else {
                     shouldRetry = true;
                 }

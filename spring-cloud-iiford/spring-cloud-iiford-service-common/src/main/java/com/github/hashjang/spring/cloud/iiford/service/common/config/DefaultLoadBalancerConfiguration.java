@@ -30,17 +30,20 @@ import java.util.Map;
 public class DefaultLoadBalancerConfiguration {
     @Autowired
     private ConfigurableApplicationContext context;
-    @Autowired
+    @Autowired(required = false)
     private CachesEndpoint cachesEndpoint;
 
     @PostConstruct
     public void init() throws NoSuchFieldException, IllegalAccessException {
-        Field cacheManagers = CachesEndpoint.class.getDeclaredField("cacheManagers");
-        ReflectionUtils.makeAccessible(cacheManagers);
-        Map<String, CacheManager> map = (Map<String, CacheManager>) cacheManagers.get(cachesEndpoint);
-        ObjectProvider<LoadBalancerCacheManager> cacheManagerProvider = context
-                .getBeanProvider(LoadBalancerCacheManager.class);
-        map.put("LoadBalancerCacheManager", cacheManagerProvider.getIfAvailable());
+        if (cachesEndpoint != null) {
+            Field cacheManagers = CachesEndpoint.class.getDeclaredField("cacheManagers");
+            ReflectionUtils.makeAccessible(cacheManagers);
+            Map<String, CacheManager> map = (Map<String, CacheManager>) cacheManagers.get(cachesEndpoint);
+            ObjectProvider<LoadBalancerCacheManager> cacheManagerProvider = context
+                    .getBeanProvider(LoadBalancerCacheManager.class);
+            map.put("LoadBalancerCacheManager", cacheManagerProvider.getIfAvailable());
+
+        }
     }
 
     @Bean

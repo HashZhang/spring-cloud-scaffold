@@ -5,6 +5,7 @@ import brave.Tracer;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import lombok.extern.log4j.Log4j2;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.CacheManager;
 import org.springframework.cloud.client.ServiceInstance;
@@ -27,7 +28,7 @@ import java.util.stream.Collectors;
 //一定必须是实现ReactorServiceInstanceLoadBalancer
 //而不是ReactorLoadBalancer<ServiceInstance>
 //因为注册的时候是ReactorServiceInstanceLoadBalancer
-@Slf4j
+@Log4j2
 public class RoundRobinWithRequestSeparatedPositionLoadBalancer implements ReactorServiceInstanceLoadBalancer {
     private final ServiceInstanceListSupplier serviceInstanceListSupplier;
     //每次请求算上重试不会超过1分钟
