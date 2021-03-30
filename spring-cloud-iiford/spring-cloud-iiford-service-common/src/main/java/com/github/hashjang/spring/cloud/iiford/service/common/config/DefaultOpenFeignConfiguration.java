@@ -2,6 +2,7 @@ package com.github.hashjang.spring.cloud.iiford.service.common.config;
 
 import com.github.hashjang.spring.cloud.iiford.service.common.feign.DefaultErrorDecoder;
 import feign.Feign;
+import feign.InvocationHandlerFactory;
 import feign.codec.ErrorDecoder;
 import io.github.resilience4j.core.ConfigurationNotFoundException;
 import io.github.resilience4j.feign.FeignDecorators;
@@ -36,5 +37,10 @@ public class DefaultOpenFeignConfiguration {
                 retry
         ).build();
         return Resilience4jFeign.builder(decorators);
+    }
+
+    @Bean
+    public InvocationHandlerFactory defaultFallbackInvocationHandlerFactory() {
+
     }
 }

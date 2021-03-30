@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <Properties>
+        <Property name="springAppName">service-common-test</Property>
+        <Property name="LOG_ROOT">log</Property>
+        <Property name="LOG_EXCEPTION_CONVERSION_WORD">%xwEx</Property>
+        <Property name="LOG_LEVEL_PATTERN">%5p</Property>
+        <Property name="LOG_DATEFORMAT_PATTERN">yyyy-MM-dd HH:mm:ss.SSS</Property>
+        <Property name="logFormat">
+            %d{${LOG_DATEFORMAT_PATTERN}} ${LOG_LEVEL_PATTERN} [${springAppName},%X{traceId},%X{spanId}]
+            [${sys:PID}] [%t][%C:%L]: %m%n${sys:LOG_EXCEPTION_CONVERSION_WORD}
+        </Property>
+        <Property name="CONSOLE_LOG_PATTERN">
+            %clr{%d{${LOG_DATEFORMAT_PATTERN}}}{faint} %clr{${LOG_LEVEL_PATTERN}}
+            [${springAppName},%X{traceId},%X{spanId}] %clr{[${sys:PID}]}{magenta}
+            %clr{[%t]}{faint}%clr{[%C:%L]}{cyan}%clr{:}{faint}%m%n${sys:LOG_EXCEPTION_CONVERSION_WORD}
+        </Property>
+    </Properties>
+
+
+    <appenders>
+        <Console name="console" target="SYSTEM_OUT">
+            <!--控制台只输出level及以上级别的信息（onMatch），其他的直接拒绝（onMismatch） -->
+            <ThresholdFilter level="debug" onMatch="ACCEPT"
+                             onMismatch="DENY"/>
+            <PatternLayout pattern="${CONSOLE_LOG_PATTERN}"/>
+        </Console>
+
+        <RollingFile name="file" fileName="${LOG_ROOT}/app.log" append="true"
+                     filePattern="${LOG_ROOT}/app.log.%d{yyyy-MM-dd.HH}.gz">
+            <PatternLayout pattern="${logFormat}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+            </Policies>
+            <DefaultRolloverStrategy>
+                <Delete basePath="${LOG_ROOT}" maxDepth="1">
+                    <IfFileName glob="*app.log.*">
+                        <IfAny>
+                            <IfAccumulatedFileCount exceeds="6"/>
+                        </IfAny>
+                    </IfFileName>
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+    </appenders>
+
+    <loggers>
+        <!--default logger -->
+        <Asyncroot level="info" includeLocation="true">
+            <!--            <appender-ref ref="file" />-->
+            <appender-ref ref="console"/>
+        </Asyncroot>
+
+    </loggers>
+</configuration>

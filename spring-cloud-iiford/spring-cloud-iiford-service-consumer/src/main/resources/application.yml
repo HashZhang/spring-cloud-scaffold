@@ -1,6 +1,4 @@
 spring:
-  #  main:
-  #    allow-bean-definition-overriding: true
   application:
     # 应用名称
     name: service-consumer
@@ -83,7 +81,7 @@ eureka:
     # 是否注册从 Eureka 读取实例，默认为 true，这里写这个配置主要为了测试的时候改成 false 方便
     fetch-registry: true
     # 实例信息同步到 Eureka 初始时间间隔
-    initial-instance-info-replication-interval-seconds:
+    initial-instance-info-replication-interval-seconds: 5
   instance:
     lease-expiration-duration-in-seconds: 15
     lease-renewal-interval-in-seconds: 5

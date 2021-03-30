@@ -1,6 +1,7 @@
 package com.github.hashjang.spring.cloud.iiford.service.common.config;
 
 import brave.Tracer;
+import com.github.hashjang.spring.cloud.iiford.service.common.feign.ApacheHttpClient;
 import com.github.hashjang.spring.cloud.iiford.service.common.feign.FeignBlockingLoadBalancerClientDelegate;
 import com.github.hashjang.spring.cloud.iiford.service.common.feign.Resilience4jFeignClient;
 import io.github.resilience4j.bulkhead.ThreadPoolBulkheadRegistry;
@@ -19,6 +20,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.cloud.openfeign.loadbalancer.FeignBlockingLoadBalancerClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 
 import java.util.concurrent.TimeUnit;
 
@@ -40,9 +42,14 @@ public class CommonOpenFeignConfiguration {
         return httpClientBuilder.build();
     }
 
+    @Bean
+    public ApacheHttpClient apacheHttpClient(HttpClient httpClient) {
+        return new ApacheHttpClient(httpClient);
+    }
+
     /**
      *
-     * @param httpClient
+     * @param apacheHttpClient
      * @param loadBalancerClientProvider 为何使用 ObjectProvider 请参考 FeignBlockingLoadBalancerClientDelegate 的注释
      * @param threadPoolBulkheadRegistry
      * @param circuitBreakerRegistry
@@ -52,8 +59,9 @@ public class CommonOpenFeignConfiguration {
      * @return FeignBlockingLoadBalancerClientDelegate 为何使用这个不直接用 FeignBlockingLoadBalancerClient 请参考 FeignBlockingLoadBalancerClientDelegate 的注释
      */
     @Bean
+    @Primary
     public FeignBlockingLoadBalancerClientDelegate feignBlockingLoadBalancerCircuitBreakableClient(
-            HttpClient httpClient,
+            ApacheHttpClient apacheHttpClient,
             ObjectProvider<LoadBalancerClient> loadBalancerClientProvider,
             ThreadPoolBulkheadRegistry threadPoolBulkheadRegistry,
             CircuitBreakerRegistry circuitBreakerRegistry,
@@ -63,7 +71,7 @@ public class CommonOpenFeignConfiguration {
     ) {
         return new FeignBlockingLoadBalancerClientDelegate(
                 new Resilience4jFeignClient(
-                        httpClient,
+                        apacheHttpClient,
                         threadPoolBulkheadRegistry,
                         circuitBreakerRegistry,
                         tracer

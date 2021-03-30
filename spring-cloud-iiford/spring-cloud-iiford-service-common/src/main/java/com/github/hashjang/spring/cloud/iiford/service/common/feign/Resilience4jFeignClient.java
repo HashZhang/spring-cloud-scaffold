@@ -4,6 +4,7 @@ import brave.Span;
 import brave.Tracer;
 import com.alibaba.fastjson.JSON;
 import com.github.hashjang.spring.cloud.iiford.service.common.misc.ResponseWrapperException;
+import feign.Client;
 import feign.Request;
 import feign.Response;
 import io.github.resilience4j.bulkhead.ThreadPoolBulkhead;
@@ -14,6 +15,7 @@ import io.github.resilience4j.core.ConfigurationNotFoundException;
 import io.vavr.control.Try;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.HttpClient;
+import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.HttpStatus;
 
 import java.io.IOException;
@@ -24,18 +26,20 @@ import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
 
 @Slf4j
-public class Resilience4jFeignClient extends ApacheHttpClient {
+public class Resilience4jFeignClient implements Client {
     private final ThreadPoolBulkheadRegistry threadPoolBulkheadRegistry;
     private final CircuitBreakerRegistry circuitBreakerRegistry;
     private final Tracer tracer;
+    private ApacheHttpClient apacheHttpClient;
+
 
     public Resilience4jFeignClient(
-            HttpClient httpClient,
+            ApacheHttpClient apacheHttpClient,
             ThreadPoolBulkheadRegistry threadPoolBulkheadRegistry,
             CircuitBreakerRegistry circuitBreakerRegistry,
             Tracer tracer
     ) {
-        super(httpClient);
+        this.apacheHttpClient = apacheHttpClient;
         this.threadPoolBulkheadRegistry = threadPoolBulkheadRegistry;
         this.circuitBreakerRegistry = circuitBreakerRegistry;
         this.tracer = tracer;
@@ -43,10 +47,11 @@ public class Resilience4jFeignClient extends ApacheHttpClient {
 
     @Override
     public Response execute(Request request, Request.Options options) throws IOException {
-        //获取要调用的微服务
-        String serviceName = request.requestTemplate().feignTarget().name();
+        FeignClient annotation = request.requestTemplate().methodMetadata().method().getDeclaringClass().getAnnotation(FeignClient.class);
+        //和 Retry 保持一致，使用 contextId，而不是微服务名称
+        String contextId = annotation.contextId();
         //获取实例唯一id
-        String serviceInstanceId = getServiceInstanceId(request);
+        String serviceInstanceId = getServiceInstanceId(contextId, request);
         //获取实例+方法唯一id
         String serviceInstanceMethodId = getServiceInstanceMethodId(request);
 
@@ -54,13 +59,13 @@ public class Resilience4jFeignClient extends ApacheHttpClient {
         CircuitBreaker circuitBreaker;
         try {
             //每个实例一个线程池
-            threadPoolBulkhead = threadPoolBulkheadRegistry.bulkhead(serviceInstanceId, serviceName);
+            threadPoolBulkhead = threadPoolBulkheadRegistry.bulkhead(serviceInstanceId, contextId);
         } catch (ConfigurationNotFoundException e) {
             threadPoolBulkhead = threadPoolBulkheadRegistry.bulkhead(serviceInstanceId);
         }
         try {
             //每个服务实例具体方法一个resilience4j熔断记录器，在服务实例具体方法维度做熔断，所有这个服务的实例具体方法共享这个服务的resilience4j熔断配置
-            circuitBreaker = circuitBreakerRegistry.circuitBreaker(serviceInstanceMethodId, serviceName);
+            circuitBreaker = circuitBreakerRegistry.circuitBreaker(serviceInstanceMethodId, contextId);
         } catch (ConfigurationNotFoundException e) {
             circuitBreaker = circuitBreakerRegistry.circuitBreaker(serviceInstanceMethodId);
         }
@@ -77,7 +82,8 @@ public class Resilience4jFeignClient extends ApacheHttpClient {
                                 JSON.toJSONString(finalThreadPoolBulkhead.getMetrics()),
                                 JSON.toJSONString(finalCircuitBreaker.getMetrics())
                         );
-                        Response execute = super.execute(request, options);
+                        Response execute = apacheHttpClient.execute(request, options);
+                        log.info("response: {} - {}", execute.status(), execute.reason());
                         if (execute.status() != HttpStatus.OK.value()) {
                             //需要关闭，否则返回码不为200抛异常连接不会回收导致连接池耗尽
                             execute.close();
@@ -111,17 +117,15 @@ public class Resilience4jFeignClient extends ApacheHttpClient {
         }
     }
 
-    private String getServiceInstanceId(Request request) throws MalformedURLException {
-        String serviceName = request.requestTemplate().feignTarget().name();
+    private String getServiceInstanceId(String contextId, Request request) throws MalformedURLException {
         URL url = new URL(request.url());
-        return serviceName + ":" + url.getHost() + ":" + url.getPort();
+        return contextId + ":" + url.getHost() + ":" + url.getPort();
     }
 
     private String getServiceInstanceMethodId(Request request) throws MalformedURLException {
-        String serviceName = request.requestTemplate().feignTarget().name();
         URL url = new URL(request.url());
         //通过微服务名称 + 实例 + 方法的方式，获取唯一id
         String methodName = request.requestTemplate().methodMetadata().method().toGenericString();
-        return serviceName + ":" + url.getHost() + ":" + url.getPort() + ":" + methodName;
+        return url.getHost() + ":" + url.getPort() + ":" + methodName;
     }
 }

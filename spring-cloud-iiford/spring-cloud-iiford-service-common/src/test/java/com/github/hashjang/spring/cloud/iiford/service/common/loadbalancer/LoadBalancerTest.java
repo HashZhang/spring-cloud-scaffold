@@ -26,10 +26,10 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.mockito.Mockito.when;
 
-//SpringRunner也包含了MockitoJUnitRunner，所以 @Mock 注解也生效了
+//SpringRunner也包含了MockitoJUnitRunner，所以 @Mock 等注解也生效了
 @RunWith(SpringRunner.class)
 @SpringBootTest(properties = {LoadBalancerEurekaAutoConfiguration.LOADBALANCER_ZONE + "=zone1"})
-public class LoadBalancerServiceInstanceListSupplierTest {
+public class LoadBalancerTest {
 
     @EnableAutoConfiguration(exclude = EurekaDiscoveryClientConfiguration.class)
     @Configuration
