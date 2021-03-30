@@ -136,6 +136,11 @@ public class OpenFeignClientTest {
                     .thenReturn(List.of(service2Instance2));
             return mock;
         }
+
+        @Bean
+        public TestService1ClientFallback testService1ClientFallback() {
+            return new TestService1ClientFallback();
+        }
     }
 
     @Aspect
@@ -176,7 +181,7 @@ public class OpenFeignClientTest {
         String testPostRetryStatus500();
     }
 
-    public class TestService1ClientFallback implements TestService1Client {
+    public static class TestService1ClientFallback implements TestService1Client {
 
         @Override
         public HttpBinAnythingResponse anything() {
@@ -285,7 +290,7 @@ public class OpenFeignClientTest {
         List<ThreadPoolBulkhead> threadPoolBulkheads = threadPoolBulkheadRegistry.getAllBulkheads().asJava();
         Set<String> collect = threadPoolBulkheads.stream().map(ThreadPoolBulkhead::getName)
                 .filter(name -> name.contains(CONTEXT_ID_1) || name.contains(CONTEXT_ID_2)).collect(Collectors.toSet());
-        Assert.assertTrue(collect.size() > 2);
+        Assert.assertTrue(collect.size() >= 2);
         threadPoolBulkheads.forEach(threadPoolBulkhead -> {
             if (threadPoolBulkhead.getName().contains(CONTEXT_ID_1)) {
                 Assert.assertEquals(threadPoolBulkhead.getBulkheadConfig().getCoreThreadPoolSize(), DEFAULT_THREAD_POOL_SIZE);

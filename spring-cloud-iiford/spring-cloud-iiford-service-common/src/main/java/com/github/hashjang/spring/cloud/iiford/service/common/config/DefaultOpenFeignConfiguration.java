@@ -1,6 +1,7 @@
 package com.github.hashjang.spring.cloud.iiford.service.common.config;
 
 import com.github.hashjang.spring.cloud.iiford.service.common.feign.DefaultErrorDecoder;
+import com.github.hashjang.spring.cloud.iiford.service.common.feign.DefaultFallbackInvocationHandlerFactory;
 import feign.Feign;
 import feign.InvocationHandlerFactory;
 import feign.codec.ErrorDecoder;
@@ -9,6 +10,7 @@ import io.github.resilience4j.feign.FeignDecorators;
 import io.github.resilience4j.feign.Resilience4jFeign;
 import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryRegistry;
+import org.springframework.cloud.openfeign.FeignContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
@@ -40,7 +42,11 @@ public class DefaultOpenFeignConfiguration {
     }
 
     @Bean
-    public InvocationHandlerFactory defaultFallbackInvocationHandlerFactory() {
-
+    public InvocationHandlerFactory defaultFallbackInvocationHandlerFactory(
+            Environment environment,
+            FeignContext feignContext
+    ) {
+        String contextId = environment.getProperty("feign.client.name");
+        return new DefaultFallbackInvocationHandlerFactory(contextId, feignContext);
     }
 }
