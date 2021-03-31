@@ -4,17 +4,18 @@ import brave.Span;
 import brave.Tracer;
 import com.alibaba.fastjson.JSON;
 import com.github.hashjang.spring.cloud.iiford.service.common.misc.ResponseWrapperException;
+import com.github.hashjang.spring.cloud.iiford.service.common.misc.SpecialHttpStatus;
 import feign.Client;
 import feign.Request;
 import feign.Response;
 import io.github.resilience4j.bulkhead.ThreadPoolBulkhead;
 import io.github.resilience4j.bulkhead.ThreadPoolBulkheadRegistry;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.core.ConfigurationNotFoundException;
 import io.vavr.control.Try;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.http.client.HttpClient;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.HttpStatus;
 
@@ -112,6 +113,13 @@ public class Resilience4jFeignClient implements Client {
                 if (responseWrapperException.getResponse() != null) {
                     return (Response) responseWrapperException.getResponse();
                 }
+            }
+            if (cause instanceof CallNotPermittedException) {
+                return Response.builder()
+                        .request(request)
+                        .status(SpecialHttpStatus.CIRCUIT_BREAKER_ON.getValue())
+                        .reason(cause.getLocalizedMessage())
+                        .requestTemplate(request.requestTemplate()).build();
             }
             throw new ResponseWrapperException(cause.getMessage(), cause);
         }

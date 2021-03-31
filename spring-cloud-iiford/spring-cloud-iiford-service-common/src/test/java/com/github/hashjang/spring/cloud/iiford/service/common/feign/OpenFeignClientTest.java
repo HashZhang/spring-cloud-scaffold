@@ -4,6 +4,7 @@ import brave.Span;
 import brave.Tracer;
 import com.github.hashjang.spring.cloud.iiford.service.common.HttpBinAnythingResponse;
 import feign.Request;
+import feign.RetryableException;
 import io.github.resilience4j.bulkhead.ThreadPoolBulkhead;
 import io.github.resilience4j.bulkhead.ThreadPoolBulkheadRegistry;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
@@ -166,19 +167,50 @@ public class OpenFeignClientTest {
         }
     }
 
-    @FeignClient(name = "testService1", contextId = CONTEXT_ID_1, fallback = TestService1ClientFallback.class)
-    public interface TestService1Client {
-        @GetMapping("/anything")
-        HttpBinAnythingResponse anything();
+    /**
+     * 验证配置生效
+     */
+    @Test
+    public void testRetry() {
+        callCount = 0;
+        try {
+            testService1Client.testGetRetryStatus500();
+        } catch (Exception e) {
+        }
+        Assert.assertEquals(callCount, 3);
+        callCount = 0;
+        try {
+            testService1Client.testPostRetryStatus500();
+        } catch (Exception e) {
+        }
+        Assert.assertEquals(callCount, 1);
+        callCount = 0;
+        try {
+            testService2Client.testGetRetryStatus500();
+        } catch (Exception e) {
+        }
+        Assert.assertEquals(callCount, 2);
+        callCount = 0;
+        try {
+            testService2Client.testPostRetryStatus500();
+        } catch (Exception e) {
+        }
+        Assert.assertEquals(callCount, 1);
+        callCount = 0;
+        try {
+            testService2Client.testPostWithAnnontationRetryStatus500();
+        } catch (Exception e) {
+        }
+        Assert.assertEquals(callCount, 2);
+    }
 
-        @GetMapping("/status/500")
-        String testCircuitBreakerStatus500();
-
-        @GetMapping("/status/500")
-        String testGetRetryStatus500();
-
-        @PostMapping("/status/500")
-        String testPostRetryStatus500();
+    @Test(expected = RetryableException.class)
+    public void testFallback() {
+        for (int i = 0; i < 10; i++) {
+            String s = testService1Client.testGetRetryStatus500();
+            log.info(s);
+        }
+        testService2Client.testGetRetryStatus500();
     }
 
     public static class TestService1ClientFallback implements TestService1Client {
@@ -206,12 +238,17 @@ public class OpenFeignClientTest {
         }
     }
 
-    @FeignClient(name = "testService2", contextId = CONTEXT_ID_2)
-    public interface TestService2Client {
+    @FeignClient(name = "testService1", contextId = CONTEXT_ID_1, configuration = TestService1ClientConfiguration.class)
+    public interface TestService1Client {
         @GetMapping("/anything")
         HttpBinAnythingResponse anything();
+
+        @GetMapping("/status/500")
+        String testCircuitBreakerStatus500();
+
         @GetMapping("/status/500")
         String testGetRetryStatus500();
+
         @PostMapping("/status/500")
         String testPostRetryStatus500();
     }
@@ -372,30 +409,35 @@ public class OpenFeignClientTest {
         });
     }
 
-    /**
-     * 验证配置生效
-     */
-    @Test
-    public void testRetry() {
-        callCount = 0;
-        try {
-            testService1Client.testGetRetryStatus500();
-        } catch (Exception e) {}
-        Assert.assertEquals(callCount, 3);
-        callCount = 0;
-        try {
-            testService1Client.testPostRetryStatus500();
-        } catch (Exception e) {}
-        Assert.assertEquals(callCount, 1);
-        callCount = 0;
-        try {
-            testService2Client.testGetRetryStatus500();
-        } catch (Exception e) {}
-        Assert.assertEquals(callCount, 2);
-        callCount = 0;
-        try {
-            testService2Client.testPostRetryStatus500();
-        } catch (Exception e) {}
-        Assert.assertEquals(callCount, 1);
+    @FeignClient(name = "testService2", contextId = CONTEXT_ID_2)
+    public interface TestService2Client {
+        @GetMapping("/anything")
+        HttpBinAnythingResponse anything();
+
+        @GetMapping("/status/500")
+        String testGetRetryStatus500();
+
+        @PostMapping("/status/500")
+        String testPostRetryStatus500();
+
+        @RetryableMethod
+        @PostMapping("/status/500")
+        String testPostWithAnnontationRetryStatus500();
+    }
+
+    public static class TestService1ClientConfiguration {
+        @Bean
+        public FeignDecoratorBuilderInterceptor feignDecoratorBuilderInterceptor(
+                TestService1ClientFallback testService1ClientFallback
+        ) {
+            return builder -> {
+                builder.withFallback(testService1ClientFallback);
+            };
+        }
+
+        @Bean
+        public TestService1ClientFallback testService1ClientFallback() {
+            return new TestService1ClientFallback();
+        }
     }
 }

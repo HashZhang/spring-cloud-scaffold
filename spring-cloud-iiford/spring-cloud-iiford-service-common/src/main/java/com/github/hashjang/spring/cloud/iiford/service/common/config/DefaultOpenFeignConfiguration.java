@@ -1,22 +1,24 @@
 package com.github.hashjang.spring.cloud.iiford.service.common.config;
 
 import com.github.hashjang.spring.cloud.iiford.service.common.feign.DefaultErrorDecoder;
-import com.github.hashjang.spring.cloud.iiford.service.common.feign.DefaultFallbackInvocationHandlerFactory;
+import com.github.hashjang.spring.cloud.iiford.service.common.feign.FeignDecoratorBuilderInterceptor;
 import feign.Feign;
-import feign.InvocationHandlerFactory;
 import feign.codec.ErrorDecoder;
 import io.github.resilience4j.core.ConfigurationNotFoundException;
 import io.github.resilience4j.feign.FeignDecorators;
 import io.github.resilience4j.feign.Resilience4jFeign;
 import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryRegistry;
-import org.springframework.cloud.openfeign.FeignContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 
+import java.util.List;
+
 @Configuration(proxyBeanMethods = false)
 public class DefaultOpenFeignConfiguration {
+    public static final String FALLBACK_SUFFIX = "_fallback";
+    public static final String FALLBACK_FACTORY_SUFFIX = "_fallback_factory";
 
     @Bean
     public ErrorDecoder errorDecoder() {
@@ -25,6 +27,15 @@ public class DefaultOpenFeignConfiguration {
 
     @Bean
     public Feign.Builder resilience4jFeignBuilder(
+            List<FeignDecoratorBuilderInterceptor> feignDecoratorBuilderInterceptors,
+            FeignDecorators.Builder builder
+    ) {
+        feignDecoratorBuilderInterceptors.forEach(feignDecoratorBuilderInterceptor -> feignDecoratorBuilderInterceptor.intercept(builder));
+        return Resilience4jFeign.builder(builder.build());
+    }
+
+    @Bean
+    public FeignDecorators.Builder defaultBuilder(
             Environment environment,
             RetryRegistry retryRegistry
     ) {
@@ -35,18 +46,9 @@ public class DefaultOpenFeignConfiguration {
         } catch (ConfigurationNotFoundException e) {
             retry = retryRegistry.retry(name);
         }
-        FeignDecorators decorators = FeignDecorators.builder().withRetry(
+        return FeignDecorators.builder().withRetry(
                 retry
-        ).build();
-        return Resilience4jFeign.builder(decorators);
+        );
     }
 
-    @Bean
-    public InvocationHandlerFactory defaultFallbackInvocationHandlerFactory(
-            Environment environment,
-            FeignContext feignContext
-    ) {
-        String contextId = environment.getProperty("feign.client.name");
-        return new DefaultFallbackInvocationHandlerFactory(contextId, feignContext);
-    }
 }
