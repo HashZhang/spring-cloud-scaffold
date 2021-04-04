@@ -20,6 +20,7 @@
         <module>spring-cloud-iiford-eureka-server</module>
         <module>spring-cloud-iiford-service-provider</module>
         <module>spring-cloud-iiford-service-consumer</module>
+        <module>spring-cloud-iiford-webflux-common</module>
     </modules>
 
     <properties>
