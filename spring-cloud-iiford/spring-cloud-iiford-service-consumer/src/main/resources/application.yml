@@ -74,18 +74,45 @@ server:
         ALLOW_UNKNOWN_PROTOCOLS: false
     # access log相关配置
     accesslog:
-      # 存放目录
-      dir: ./log # 存放目录
+      # 存放目录，默认为 logs
+      dir: ./log
       # 是否开启
       enabled: true
-      # 格式
-      pattern: '{"time":"%{time,yyyy-MM-dd HH:mm:ss.S}","method":"%m","uri":"%U",
-                 "params":"%q","responseStatus":"%s","responseTime":"%D","responseSize":"%b",
-                 "traceId":"%{i,traceId}","spanId":"%{i,spanId}","ip":"%{i,X-Real-IP}",
-                 "referer":"%{i,Referer}","userAgent":"%{i,User-Agent}","platform":"%{i,Platform}",
-                 "thread":"%I", "localhost":"%{HOST_AND_PORT}"}'
-      # 文件前缀
+      # 格式，各种占位符后面会详细说明
+      pattern: '{
+                  "transportProtocol":"%{TRANSPORT_PROTOCOL}",
+                  "scheme":"%{SCHEME}",
+                  "protocol":"%{PROTOCOL}",
+                  "method":"%{METHOD}",
+                  "reqHeaderUserAgent":"%{i,User-Agent}",
+                  "cookieUserId": "%{c, userId}",
+                  "queryTest": "%{q, test}",
+                  "queryString": "%q",
+                  "relativePath": "%R, %{REQUEST_PATH}, %{RESOLVED_PATH}",
+                  "requestLine": "%r",
+                  "uri": "%U",
+                  "thread": "%I",
+                  "hostPort": "%{HOST_AND_PORT}",
+                  "localIp": "%A",
+                  "localPort": "%p",
+                  "localServerName": "%v",
+                  "remoteIp": "%a",
+                  "remoteHost": "%h",
+                  "bytesSent": "%b",
+                  "time":"%{time,yyyy-MM-dd HH:mm:ss.S}",
+                  "status":"%s",
+                  "reason":"%{RESPONSE_REASON_PHRASE}",
+                  "respHeaderUserSession":"%{o, userSession}",
+                  "respCookieUserId":"%{resp-cookie, userId}",
+                  "timeUsed":"%Dms, %Ts, %{RESPONSE_TIME}ms, %{RESPONSE_TIME_MICROS} us, %{RESPONSE_TIME_NANOS} ns",
+                }'
+      # 文件前缀，默认为 access_log
       prefix: access.
+      # 文件后缀，默认为 log
+      suffix: log
+      # 是否另起日志文件写 access log，默认为 true
+      # 目前只能按照日期进行 rotate，一天一个日志文件
+      rotate: true
 
 
 # actuator设置
