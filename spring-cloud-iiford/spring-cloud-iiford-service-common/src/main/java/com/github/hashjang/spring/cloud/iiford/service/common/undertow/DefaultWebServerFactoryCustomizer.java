@@ -1,6 +1,7 @@
 package com.github.hashjang.spring.cloud.iiford.service.common.undertow;
 
 import io.undertow.UndertowOptions;
+import io.undertow.attribute.ResponseTimeAttribute;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.boot.web.embedded.undertow.ConfigurableUndertowWebServerFactory;
@@ -27,6 +28,11 @@ public class DefaultWebServerFactoryCustomizer implements WebServerFactoryCustom
         if (StringUtils.isBlank(pattern)) {
             return false;
         }
-        return pattern.contains("%D") || pattern.contains("%T");
+        //判断 accesslog 是否配置了查看响应时间
+        return pattern.contains(ResponseTimeAttribute.RESPONSE_TIME_MICROS)
+                || pattern.contains(ResponseTimeAttribute.RESPONSE_TIME_MILLIS)
+                || pattern.contains(ResponseTimeAttribute.RESPONSE_TIME_NANOS)
+                || pattern.contains(ResponseTimeAttribute.RESPONSE_TIME_MILLIS_SHORT)
+                || pattern.contains(ResponseTimeAttribute.RESPONSE_TIME_SECONDS_SHORT);
     }
 }
