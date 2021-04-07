@@ -85,8 +85,8 @@ server:
                   "protocol":"%{PROTOCOL}",
                   "method":"%{METHOD}",
                   "reqHeaderUserAgent":"%{i,User-Agent}",
-                  "cookieUserId": "%{c, userId}",
-                  "queryTest": "%{q, test}",
+                  "cookieUserId": "%{c,userId}",
+                  "queryTest": "%{q,test}",
                   "queryString": "%q",
                   "relativePath": "%R, %{REQUEST_PATH}, %{RESOLVED_PATH}",
                   "requestLine": "%r",
@@ -102,8 +102,8 @@ server:
                   "time":"%{time,yyyy-MM-dd HH:mm:ss.S}",
                   "status":"%s",
                   "reason":"%{RESPONSE_REASON_PHRASE}",
-                  "respHeaderUserSession":"%{o, userSession}",
-                  "respCookieUserId":"%{resp-cookie, userId}",
+                  "respHeaderUserSession":"%{o,userSession}",
+                  "respCookieUserId":"%{resp-cookie,userId}",
                   "timeUsed":"%Dms, %Ts, %{RESPONSE_TIME}ms, %{RESPONSE_TIME_MICROS} us, %{RESPONSE_TIME_NANOS} ns",
                 }'
       # 文件前缀，默认为 access_log
