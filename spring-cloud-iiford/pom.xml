@@ -20,6 +20,7 @@
         <module>spring-cloud-iiford-eureka-server</module>
         <module>spring-cloud-iiford-service-provider</module>
         <module>spring-cloud-iiford-service-consumer</module>
+        <module>spring-cloud-iiford-config-server</module>
     </modules>
 
     <properties>
@@ -27,6 +28,21 @@
     </properties>
 
     <dependencies>
+        <!--日志需要用log4j2-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-logging</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-log4j2</artifactId>
+        </dependency>
         <!--junit单元测试-->
         <dependency>
             <groupId>junit</groupId>

@@ -38,7 +38,8 @@ import java.util.Map;
 import static feign.Util.UTF_8;
 
 /**
- * 和 feign.httpclient.ApacheHttpClient 一模一样，但是不是 final 的
+ * 和 feign.httpclient.ApacheHttpClient 一模一样，但是不是 final 的，用于单元测试
+ *
  * @see https://github.com/OpenFeign/feign/blob/master/httpclient/src/main/java/feign/httpclient/ApacheHttpClient.java
  * @see feign.httpclient.ApacheHttpClient
  */
