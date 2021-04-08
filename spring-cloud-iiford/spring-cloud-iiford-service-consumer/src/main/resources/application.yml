@@ -104,7 +104,7 @@ server:
                   "reason":"%{RESPONSE_REASON_PHRASE}",
                   "respHeaderUserSession":"%{o,userSession}",
                   "respCookieUserId":"%{resp-cookie,userId}",
-                  "timeUsed":"%Dms, %Ts, %{RESPONSE_TIME}ms, %{RESPONSE_TIME_MICROS} us, %{RESPONSE_TIME_NANOS} ns",
+                  "timeUsed":"%Dms, %Ts, %{RESPONSE_TIME}ms, %{RESPONSE_TIME_MICROS}us, %{RESPONSE_TIME_NANOS}ns",
                 }'
       # 文件前缀，默认为 access_log
       prefix: access.
