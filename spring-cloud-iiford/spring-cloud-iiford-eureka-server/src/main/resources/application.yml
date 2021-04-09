@@ -131,8 +131,27 @@ eureka:
     #配置eureka上面微服务通过ip访问彼此服务，而不是域名
     prefer-ip-address: true
   server:
+    #注意，最好所有的客户端实例配置的心跳时间相关的配置，是相同的。这样使用自我保护的特性最准确。
     #关闭自我保护
+    #我们这里不使用自我保护，因为：
+    #自我保护主要针对集群中网络出现问题，导致有很多实例无法发送心跳导致很多实例状态异常，但是实际实例还在正常工作的情况，不要让这些实例不参与负载均衡
+    #启用自我保护的情况下，就会停止对于实例的过期
+    #但是，如果出现这种情况，其实也代表很多实例无法读取注册中心了。
+    #并且还有一种情况就是，Eureka 重启。虽然不常见，但是对于镜像中其他的组件更新我们还是很频繁的
+    #我倾向于从客户端对于实例缓存机制来解决这个问题，如果返回实例列表为空，则使用上次的实例列表进行负载均衡，这样既能解决 Eureka 重启的情况，又能处理一些 Eureka 网络隔离的情况
     enable-self-preservation: false
+    #每隔 renewal-threshold-update-interval-ms 这么长时间更新每分钟需要收到 renew （实例心跳）请求个数
+    #更新流程大概是：计算当前一共有多少实例，如果大于之前期望的实例量 * renewal-percent-threshold（或者没开启自我保护模式）,则更新期望的实例数量为当前一共有多少实例
+    #之后根据期望的实例数量，计算期望需要收到的实例心跳请求个数 = 期望的实例数量 * （60 / expected-client-renewal-interval-seconds） * renewal-percent-threshold
+    #公式中 60 代表一分钟，因为公式用到了 expected-client-renewal-interval-seconds，也就是实例平均心跳间隔，为了使这个公式准确，最好每个实例配置一样的心跳时间
+    #默认 900000ms = 900s = 15min
+    renewal-threshold-update-interval-ms: 900000
+    #上面提到的实例平均心跳间隔，为了使这个公式准确，最好每个实例配置一样的心跳时间
+    #默认 30s
+    expected-client-renewal-interval-seconds: 30
+    #在启用自我保护的时候才有用
+    #如果启用用了自我保护，则会 renewal-threshold-update-interval-ms 指定的时间内，收到的心跳请求个数是否小于实例个数乘以这个 renewal-percent-threshold
+    renewal-percent-threshold: 0.85
     #eureka server刷新readCacheMap的时间，注意，client读取的是readCacheMap，这个时间决定了多久会把readWriteCacheMap的缓存更新到readCacheMap上
     #默认30s
     eviction-interval-timer-in-ms: 3000
@@ -143,3 +162,6 @@ eureka:
     #启用主动失效，并且每次主动失效检测间隔为3s
     #默认60s
     response-cache-update-interval-ms: 3000
+
+    peer-eureka-nodes-update-interval-ms:
+
