@@ -146,22 +146,80 @@ eureka:
     #公式中 60 代表一分钟，因为公式用到了 expected-client-renewal-interval-seconds，也就是实例平均心跳间隔，为了使这个公式准确，最好每个实例配置一样的心跳时间
     #默认 900000ms = 900s = 15min
     renewal-threshold-update-interval-ms: 900000
-    #上面提到的实例平均心跳间隔，为了使这个公式准确，最好每个实例配置一样的心跳时间
+    #上面提到的实例平均心跳间隔，或者说是期望的心跳间隔，为了使这个公式准确，最好每个实例配置一样的心跳时间
     #默认 30s
     expected-client-renewal-interval-seconds: 30
+    #eureka server 更新其他 eureka server 实力列表间隔，默认10分钟
+    peer-eureka-nodes-update-interval-ms: 600000
+    #是否启用请求响应压缩，默认不启用
+    enable-replicated-request-compression: true
+    #如果启动后和其他 eureka server 同步之后服务实例个数还是 0，那么等待这个配置这么长时间之后再提供服务，在此期间收到的查询请求都会返回 403
+    #默认5分钟，如果当前 eureka server 开启了服务注册并且注册地址包括本身的话，这个配置等同于无效，因为服务实例个数永远不会是 0
+    wait-time-in-ms-when-sync-empty: 300000
     #在启用自我保护的时候才有用
     #如果启用用了自我保护，则会 renewal-threshold-update-interval-ms 指定的时间内，收到的心跳请求个数是否小于实例个数乘以这个 renewal-percent-threshold
     renewal-percent-threshold: 0.85
-    #eureka server刷新readCacheMap的时间，注意，client读取的是readCacheMap，这个时间决定了多久会把readWriteCacheMap的缓存更新到readCacheMap上
-    #默认30s
+    #主动检查服务实例是否失效的任务执行间隔，默认是 60s
     eviction-interval-timer-in-ms: 3000
-    #eureka server缓存readWriteCacheMap失效时间，这个只有在这个时间过去后缓存才会失效，失效前不会更新，过期后从registry重新读取注册服务信息，registry是一个ConcurrentHashMap。
-    #由于启用了evict其实就用不太上改这个配置了
+    #是否启用只读缓存，也就是 readCacheMap，否则不会使用 readCacheMap，而是所有的实例更新以及读取，都会在 readWriteCacheMap 上面，这样导致锁冲突频繁，效率低下。
+    use-read-only-response-cache: true
+    #eureka server缓存 readWriteCacheMap 失效时间，这个只有在这个时间过去后缓存才会失效，失效前不会更新，过期后从registry重新读取注册服务信息，registry是一个ConcurrentHashMap。
+    #由于启用了 evict（主动检查服务实例是否失效） 其实就用不太上改这个配置了
     #默认180s
     response-cache-auto-expiration-in-seconds: 180
-    #启用主动失效，并且每次主动失效检测间隔为3s
-    #默认60s
+    #eureka server 刷新 readCacheMap 的时间，注意，client 读取的是 readCacheMap，这个时间决定了多久会把 readWriteCacheMap 的缓存更新到 readCacheMap 上
+    #默认30s
     response-cache-update-interval-ms: 3000
-
-    peer-eureka-nodes-update-interval-ms:
+    #是否关闭 delta 接口，也就是不是用增量更新，这样 recentlyChangedQueue 也就没啥用了。默认为 false
+    disable-delta: false
+    #recentlyChangedQueue 里面元素的保留时间，默认保留最近 3 分钟
+    retention-time-in-m-s-in-delta-queue: 180000
+    #每过多久，对 recentlyChangedQueue 检查过期，默认 30 秒
+    delta-retention-timer-interval-in-ms: 30000
+    #已经没有用了
+    peer-eureka-status-refresh-time-interval-ms: 0
+    #已经没有用了
+    number-of-replication-retries: 0
+    #eureka server 通过 httpclient 访问其他 eureka server 同步实例，httpclient 的连接超时，默认 200ms
+    peer-node-connect-timeout-ms: 200
+    #httpclient 的读取超时，默认 200ms，一般不用太长
+    peer-node-read-timeout-ms: 200
+    #httpclient 的最大总连接数量，默认 1000
+    peer-node-total-connections: 1000
+    #httpclient 的对于某一 host 最大总连接数量，默认 500
+    peer-node-total-connections-per-host: 500
+    #httpclient 的连接空闲保持时间，默认 30s
+    peer-node-connection-idle-timeout-seconds: 30
+    #已经没有用了
+    max-idle-thread-age-in-minutes-for-peer-replication: 0
+    #已经没有用了
+    min-threads-for-status-replication: 0
+    #已经没有用了，只有 max-threads-for-peer-replication 有用
+    min-threads-for-peer-replication: 0
+    #用来处理同步任务的线程数量，有两个线程池，一个处理批量任务，一个处理非批量任务，这两个线程池的大小由这个参数决定，默认 20
+    max-threads-for-peer-replication: 20
+    #集群内至少有多少个 UP 的 eureka server 实例数量，当前 eureka server 状态为 UP。默认 -1，也就是 eureka server 状态不考虑 UP 的集群内其他 eureka server 数量。
+    min-available-instances-for-peer-replication: -1
+    #请求其他实例任务的最大超时时间，默认 30 秒
+    max-time-for-replication: 30000
+    #是否禁用通过 delta 请求其他 Region 的 eureka server
+    disable-delta-for-remote-regions: false
+    #请求其他 Region 的 httpclient 的连接超时，默认 1000ms
+    remote-region-connect-timeout-ms: 1000
+    #请求其他 Region 的 httpclient 的读取超时，默认 1000ms
+    remote-region-read-timeout-ms: 1000
+    #请求其他 Region 的 httpclient 的最大总连接数量，默认 1000
+    remote-region-total-connections: 1000
+    #请求其他 Region 的 httpclient 的对于某一 host 最大总连接数量，默认 500
+    remote-region-total-connections-per-host: 500
+    #请求其他 Region 的 httpclient 的连接空闲保持时间，默认 30s
+    remote-region-connection-idle-timeout-seconds: 30
+    #请求其他 Region 的 http 请求是否开启 gzip，对于其他 Region 我们认为网络连接是比较慢的，所以默认开启压缩
+    g-zip-content-from-remote-region: true
+    remote-region-urls-with-name:
+    remote-region-app-whitelist:
+    #如果需要从其他 Region 获取实例信息，这个获取间隔，默认为 30s
+    remote-region-registry-fetch-interval: 30
+    #如果需要从其他 Region 获取实例信息，这个任务的线程池，默认为 20个
+    remote-region-fetch-thread-pool-size: 20
 
