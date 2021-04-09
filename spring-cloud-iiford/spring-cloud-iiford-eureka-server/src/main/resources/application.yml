@@ -196,8 +196,12 @@ eureka:
     min-threads-for-status-replication: 0
     #已经没有用了，只有 max-threads-for-peer-replication 有用
     min-threads-for-peer-replication: 0
-    #用来处理同步任务的线程数量，有两个线程池，一个处理批量任务，一个处理非批量任务，这两个线程池的大小由这个参数决定，默认 20
+    #用来处理同步任务的线程数量，有两个线程池，一个处理批量任务，一个处理非批量任务（如果没用 AWS Autoscaling 对接相关特性则没有啥用），这两个线程池的大小由这个参数决定，默认 20
     max-threads-for-peer-replication: 20
+    #处理批量任务的线程池队列长度，默认为 10000
+    max-elements-in-peer-replication-pool: 10000
+    #处理非批量任务的线程池队列长度，默认为 10000
+    max-elements-in-status-replication-pool: 10000
     #集群内至少有多少个 UP 的 eureka server 实例数量，当前 eureka server 状态为 UP。默认 -1，也就是 eureka server 状态不考虑 UP 的集群内其他 eureka server 数量。
     min-available-instances-for-peer-replication: -1
     #请求其他实例任务的最大超时时间，默认 30 秒
@@ -222,4 +226,5 @@ eureka:
     remote-region-registry-fetch-interval: 30
     #如果需要从其他 Region 获取实例信息，这个任务的线程池，默认为 20个
     remote-region-fetch-thread-pool-size: 20
+
 
