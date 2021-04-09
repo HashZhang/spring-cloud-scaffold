@@ -244,5 +244,7 @@ eureka:
     sync-when-timestamp-differs: true
     #如果当前 eureka server 没有某个服务的实例，是否禁用从其他region获取实例，默认是 false
     disable-transparent-fallback-to-other-region: true
+    #目前没用了
+    batch-replication: false
 
 
