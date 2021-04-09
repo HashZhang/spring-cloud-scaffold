@@ -130,6 +130,9 @@ eureka:
     lease-renewal-interval-in-seconds: 5
     #配置eureka上面微服务通过ip访问彼此服务，而不是域名
     prefer-ip-address: true
+    registry:
+      #请参考 wait-time-in-ms-when-sync-empty 配置说明
+      default-open-for-traffic-count: 1
   server:
     #注意，最好所有的客户端实例配置的心跳时间相关的配置，是相同的。这样使用自我保护的特性最准确。
     #关闭自我保护
@@ -153,9 +156,16 @@ eureka:
     peer-eureka-nodes-update-interval-ms: 600000
     #是否启用请求响应压缩，默认不启用
     enable-replicated-request-compression: true
-    #如果启动后和其他 eureka server 同步之后服务实例个数还是 0，那么等待这个配置这么长时间之后再提供服务，在此期间收到的查询请求都会返回 403
-    #默认5分钟，如果当前 eureka server 开启了服务注册并且注册地址包括本身的话，这个配置等同于无效，因为服务实例个数永远不会是 0
+    #如果启动后和其他 eureka server 同步之后服务实例个数还是 0，
+    #那么等待这个配置这么长时间之后再提供服务，在此期间收到的查询请求都会返回 403
+    #目前，由于默认的 registry-sync-retries 为 0，所以其实启动后和其他 eureka server 不会同步
+    #实例个数肯定是 0，但是默认的情况下，如果实例个数为 0 则认为实例个数为 eureka.instance.registry.default-open-for-traffic-count配置的的值，默认为 1
+    #所以，都用默认配置的话，其实这个机制不生效，参考代码 org.springframework.cloud.netflix.eureka.server.openForTraffic
     wait-time-in-ms-when-sync-empty: 300000
+    #启动时从其他 eureka server 同步服务实例信息的最大重试次数，直到实例个数不为 0，默认为 0，这样其实就是不同步
+    registry-sync-retries: 0
+    #启动时从其他 eureka server 同步服务实例信息重试间隔
+    registry-sync-retry-wait-ms: 30000
     #在启用自我保护的时候才有用
     #如果启用用了自我保护，则会 renewal-threshold-update-interval-ms 指定的时间内，收到的心跳请求个数是否小于实例个数乘以这个 renewal-percent-threshold
     renewal-percent-threshold: 0.85
@@ -192,12 +202,14 @@ eureka:
     peer-node-connection-idle-timeout-seconds: 30
     #已经没有用了
     max-idle-thread-age-in-minutes-for-peer-replication: 0
-    #已经没有用了
+    #已经没有用了，只有 max-threads-for-status-replication 有用
     min-threads-for-status-replication: 0
     #已经没有用了，只有 max-threads-for-peer-replication 有用
     min-threads-for-peer-replication: 0
-    #用来处理同步任务的线程数量，有两个线程池，一个处理批量任务，一个处理非批量任务（如果没用 AWS Autoscaling 对接相关特性则没有啥用），这两个线程池的大小由这个参数决定，默认 20
+    #用来处理同步任务的线程数量，有两个线程池，一个处理批量同步任务，默认大小为20
     max-threads-for-peer-replication: 20
+    #另一个处理非批量任务（如果没用 AWS Autoscaling 对接相关特性则没有啥用），默认大小为20
+    max-threads-for-status-replication: 20
     #处理批量任务的线程池队列长度，默认为 10000
     max-elements-in-peer-replication-pool: 10000
     #处理非批量任务的线程池队列长度，默认为 10000
@@ -220,11 +232,17 @@ eureka:
     remote-region-connection-idle-timeout-seconds: 30
     #请求其他 Region 的 http 请求是否开启 gzip，对于其他 Region 我们认为网络连接是比较慢的，所以默认开启压缩
     g-zip-content-from-remote-region: true
-    remote-region-urls-with-name:
-    remote-region-app-whitelist:
+    #    remote-region-urls-with-name:
+    #    remote-region-app-whitelist:
     #如果需要从其他 Region 获取实例信息，这个获取间隔，默认为 30s
     remote-region-registry-fetch-interval: 30
     #如果需要从其他 Region 获取实例信息，这个任务的线程池，默认为 20个
     remote-region-fetch-thread-pool-size: 20
+    #当收到服务实例心跳请求，可能会有 lastDirtyTimestamp 标识上次实例信息修改时间。
+    #如果这个时间和 eureka server 内存中记录的服务实例的 lastDirtyTimestamp 不一样的话，如果配置 sync-when-timestamp-differs，会返回 404
+    #如果 eureka client 心跳请求响应为 404 的话，则会重新发送注册请求更新服务实例信息
+    sync-when-timestamp-differs: true
+    #如果当前 eureka server 没有某个服务的实例，是否禁用从其他region获取实例，默认是 false
+    disable-transparent-fallback-to-other-region: true
 
 
