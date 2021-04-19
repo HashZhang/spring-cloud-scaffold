@@ -121,6 +121,9 @@ eureka:
       # 默认eureka集群,这里必须是defaultZone，不能用-替换大写，与其他的配置不一样，因为实在EurekaClientConfigBean里面写死的
       defaultZone: http://127.0.0.1:8211/eureka/
   instance:
+    instance-id: ${spring.cloud.client.ip-address}:${spring.application.name}:${server.port}
+    # app名称，不填写在Spring-cloud-netflix体系下默认就是spring.application.name
+    appname: ${spring.application.name}
     # 服务过期时间配置,超过这个时间没有接收到心跳EurekaServer就会将这个实例剔除
     # 注意，EurekaServer一定要设置eureka.server.eviction-interval-timer-in-ms否则这个配置无效，这个配置一般为服务刷新时间配置的三倍
     # 默认90s
@@ -133,6 +136,19 @@ eureka:
     registry:
       #请参考 wait-time-in-ms-when-sync-empty 配置说明
       default-open-for-traffic-count: 1
+    #app组名称归类用的，目前也没什么用
+    app-group-name: common
+    #实例注册后是否立刻开始服务，默认为 false，一般注册后还需要做一些操作，所以注册实例的状态是 STARTING。后面改变状态后会更新为 UP
+    instance-enabled-onit: false
+    #不用设置 non-secure-port，自动使用 server.port 作为 non-secure-port
+    #non-secure-port:
+    #我们一般内部调用不用 ssl，所以不需要配置 secure-port
+    #secure-port:
+    #默认是启用 non-secure-port 的
+    non-secure-port-enabled: true
+    #默认是不启用 secure-port 的
+    secure-port-enabled: false
+
   server:
     #注意，最好所有的客户端实例配置的心跳时间相关的配置，是相同的。这样使用自我保护的特性最准确。
     #关闭自我保护
