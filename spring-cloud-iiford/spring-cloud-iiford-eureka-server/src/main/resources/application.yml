@@ -114,40 +114,158 @@ management:
 
 eureka:
   client:
-    # eureka client刷新本地缓存时间
-    # 默认30s
-    registry-fetch-interval-seconds: 5
+    # 可用区列表，key 为 region，value 为 zone
+    availability-zones:
+      region1: zone1, zone2
+      region2: zone3
+    # 所在区域，通过这个读取 availability-zones 获取 zone，然后通过 zone 读取 service-url 获取对应的 eureka url
+    # 这里的逻辑对应的类是 ConfigClusterResolver 和 ZoneAffinityClusterResolver
+    region: region1
+    # key 为 zone，value 为 eureka 链接，以逗号分隔
     service-url:
       # 默认eureka集群,这里必须是defaultZone，不能用-替换大写，与其他的配置不一样，因为实在EurekaClientConfigBean里面写死的
       defaultZone: http://127.0.0.1:8211/eureka/
+      zone1: http://127.0.0.1:8212/eureka/
+      zone2: http://127.0.0.1:8213/eureka/
+      zone3: http://127.0.0.1:8214/eureka/
+    # 如果上面 eureka server 地址相关配置更新了，多久之后会重新读取感知到
+    eureka-service-url-poll-interval-seconds: 300
+    # 是否使用 dns 获取，如果指定了则通过下面的 dns 配置获取，而不是上面的 service-url
+    use-dns-for-fetching-service-urls: false
+    # dns 配置
+    # eureka-server-d-n-s-name:
+    # dns 配置的 eureka server 的 port
+    # eureka-server-port:
+    # dns 配置的 eureka server 的 port 后面的 uri 前缀 context
+    # eureka-server-u-r-l-context:
+    # 如果设置为 true，则同一个 zone 下的 eureka 会跑到前面优先访问。默认为 true
+    prefer-same-zone-eureka: true
+    # 实例信息同定时同步到 Eureka Server 的间隔时间。每隔这么长时间，检查实例信息（即eureka.instance配置信息）是否发生变化，如果发生变化，则同步到 Eureka Server，默认 30s
+    # 主要检查两类信息，分别是服务地址相关信息，以及服务过期时间与刷新时间配置信息
+    instance-info-replication-interval-seconds: 30
+    # 实例信息同定时同步到 Eureka Server 的初始延迟时间，默认 40s
+    initial-instance-info-replication-interval-seconds: 40
+    # 代理相关配置
+    # proxy-host:
+    # proxy-port:
+    # proxy-user-name:
+    # proxy-password:
+    # 是否对于发往 Eureka Server 的 http 请求启用 gzip，目前已经过期了，只要 Eureka Server 启用了 gzip，请求就是 gzip 压缩的
+    g-zip-content: true
+    # httpclient 的链接超时，默认 5s
+    eureka-server-connect-timeout-seconds: 5
+    # httpclient 的读取超时，默认 5s
+    eureka-server-read-timeout-seconds: 8
+    # httpclient 的空闲连接超时，默认 30s
+    eureka-connection-idle-timeout-seconds: 30
+    # httpclient 的总连接数量，默认 200
+    eureka-server-total-connections: 200
+    # httpclient 的每个 host 的连接数量
+    eureka-server-total-connections-per-host: 50
+    # 是否从 eureka 上面拉取实例
+    fetch-registry: true
+    # 是否将自己注册到 eureka 上面
+    register-with-eureka: true
+    # 如果只想获取一个特定 virtual host name 的实例列表，就配置 registry-refresh-single-vip-address
+    #registry-refresh-single-vip-address:
+    # 客户端请求头指定服务端返回的实例信息是压缩的信息还是完整信息，默认是完整信息
+    # full, compact
+    client-data-accept: full
+    # eureka client 刷新本地缓存时间
+    # 默认30s
+    registry-fetch-interval-seconds: 5
+    # eureka client 刷新本地缓存(定时拉取 eureka 实例列表)线程池大小，默认为 2
+    cache-refresh-executor-thread-pool-size: 2
+    # eureka client 刷新本地缓存(定时拉取 eureka 实例列表)线程池任务最大延迟时间，这个配置是定时拉取任务延迟(registry-fetch-interval-seconds)的倍数，默认 10 倍
+    cache-refresh-executor-exponential-back-off-bound: 10
+    # 是否禁用增量拉取，如果网络条件不好，可以禁用，每次都会拉取全量
+    disable-delta: false
+    # 只保留状态为 UP 的实例，默认为 true
+    filter-only-up-instances: true
+    #可以指定也从某些 region 拉取服务实例
+    #fetch-remote-regions-registry:
+    #是否开启健康检查，默认开启，开启的话实例注册与心跳的时候，可能会通过 actuator 的 health 更新实例健康状态。参考：EurekaDiscoveryClientConfiguration
+    healthcheck:
+      enabled: true
+    # 是否打日志记录每次拉取实例信息与当前缓存内的实例信息变化
+    log-delta-diff: true
+    # eureka client 心跳线程池大小，默认为 2
+    heartbeat-executor-thread-pool-size: 2
+    #线程池任务最大延迟时间，这个配置是实例心跳间隔配置(lease-renewal-interval-in-seconds)的倍数，默认 10 倍
+    heartbeat-executor-exponential-back-off-bound: 10
+    #在spring cloud 环境中，DiscoveryClient 用的其实都是 CompositeDiscoveryClient，这个 CompositeDiscoveryClient 逻辑其实就是多个 DiscoveryClient 共存，先访问一个，没找到就通过下一个寻找
+    #这个order决定了顺序，默认为 0
+    order: 0
+    # 是否在初始化的时候就注册到 eureka，一般设置为 false，因为实例还不能正常提供服务
+    should-enforce-registration-at-init: false
+    # 是否在关闭的时候注销实例，默认为 true
+    should-unregister-on-shutdown: true
+    # 是否对于实例状态改变更新进行限流，默认为 true
+    on-demand-update-status-change: true
+    refresh:
+      # 是否启用对于 refresh scope 的支持，这样 context refresh 可以重新刷新这些配置，调用 /actuator/refresh 也是，默认为 true
+      enable: true
+    webclient:
+      # 是否使用 webclient 替换默认的 httpclient，默认是 false
+      enabled: false
+    # tls 相关配置，默认没有启用
+  #    tls:
+  #      enabled: false
+  #      key-password:
+  #      key-store:
+  #      key-store-password:
+  #      key-store-type:
+  #      trust-store:
+  #      trust-store-password:
+  #      trust-store-type:
   instance:
-    instance-id: ${spring.cloud.client.ip-address}:${spring.application.name}:${server.port}
-    # app名称，不填写在Spring-cloud-netflix体系下默认就是spring.application.name
-    appname: ${spring.application.name}
-    # 服务过期时间配置,超过这个时间没有接收到心跳EurekaServer就会将这个实例剔除
-    # 注意，EurekaServer一定要设置eureka.server.eviction-interval-timer-in-ms否则这个配置无效，这个配置一般为服务刷新时间配置的三倍
-    # 默认90s
-    lease-expiration-duration-in-seconds: 15
-    #服务刷新时间配置，每隔这个时间会主动心跳一次
-    #默认30s
-    lease-renewal-interval-in-seconds: 5
-    #配置eureka上面微服务通过ip访问彼此服务，而不是域名
+    #一般不用我们自己设置，EurekaInstanceConfigBean 的构造器会通过 InetUtils 获取 ip 地址
+    #ip-address:
+    #一般不用我们自己设置，EurekaInstanceConfigBean 的构造器会通过 InetUtils 获取 hostname
+    #hostname:
+    #注册到 eureka 上面供其他实例访问的地址使用 ip 进行注册，其他实例会通过 ip 进行访问
     prefer-ip-address: true
-    registry:
-      #请参考 wait-time-in-ms-when-sync-empty 配置说明
-      default-open-for-traffic-count: 1
-    #app组名称归类用的，目前也没什么用
-    app-group-name: common
-    #实例注册后是否立刻开始服务，默认为 false，一般注册后还需要做一些操作，所以注册实例的状态是 STARTING。后面改变状态后会更新为 UP
-    instance-enabled-onit: false
     #不用设置 non-secure-port，自动使用 server.port 作为 non-secure-port
     #non-secure-port:
-    #我们一般内部调用不用 ssl，所以不需要配置 secure-port
+    #如果 secure-port-enabled 是true，则会我们一般内部调用不用 ssl，所以不需要配置 secure-port
     #secure-port:
     #默认是启用 non-secure-port 的
     non-secure-port-enabled: true
     #默认是不启用 secure-port 的
     secure-port-enabled: false
+    #个性化的实例id，包括 ip:微服务名称:端口
+    instance-id: ${spring.cloud.client.ip-address}:${spring.application.name}:${server.port}
+    # app名称，不填写在 Spring-cloud-netflix 体系下默认就是 spring.application.name
+    appname: ${spring.application.name}
+    #app组名称归类用的，目前也没什么用
+    app-group-name: common
+    #实例命名空间，目前也没什么用
+    namespace: public
+    # 服务过期时间配置,超过这个时间没有接收到心跳EurekaServer就会将这个实例剔除
+    # 注意，EurekaServer一定要设置eureka.server.eviction-interval-timer-in-ms否则这个配置无效
+    # 这个配置一般为服务刷新时间配置的三倍
+    # 默认90s
+    lease-expiration-duration-in-seconds: 15
+    #服务刷新时间配置，每隔这个时间会主动心跳一次
+    #默认30s
+    lease-renewal-interval-in-seconds: 5
+    registry:
+      #请参考 wait-time-in-ms-when-sync-empty 配置说明
+      default-open-for-traffic-count: 1
+      #初始期望发送心跳请求的实例个数，默认为1，在有新实例注册的时候，会 +1，有注销的时候会 -1，初始默认为 1 一般因为自己也注册到 eureka 上
+      expected-number-of-clients-sending-renews: 1
+    #实例注册后是否立刻开始服务，默认为 false，一般注册后还需要做一些操作，所以注册实例的状态是 STARTING。后面改变状态后会更新为 UP
+    instance-enabled-onit: false
+    #元数据map，我们可以自己使用，放一些个性化的元数据，目前只有 configPath 和 zone 比较有用。 configPath 是使用 spring-cloud-config 的时候会设置
+    metadata-map:
+      # spring cloud 体系中，可用区的配置放入元数据中，key 为 zone
+      zone: zone1
+    # 健康检查地址，默认是 /actuator/health
+    health-check-url-path: /actuator/health
+    # 实例状态地址，默认是 /actuator/info
+    status-page-url-path: /actuator/info
+    # 首页地址，默认是 /
+    home-page-url-path: /
 
   server:
     #注意，最好所有的客户端实例配置的心跳时间相关的配置，是相同的。这样使用自我保护的特性最准确。
@@ -168,32 +286,35 @@ eureka:
     #上面提到的实例平均心跳间隔，或者说是期望的心跳间隔，为了使这个公式准确，最好每个实例配置一样的心跳时间
     #默认 30s
     expected-client-renewal-interval-seconds: 30
-    #eureka server 更新其他 eureka server 实力列表间隔，默认10分钟
+    #Eureka Server 更新其他 Eureka Server 实例列表间隔，默认10分钟
     peer-eureka-nodes-update-interval-ms: 600000
     #是否启用请求响应压缩，默认不启用
     enable-replicated-request-compression: true
-    #如果启动后和其他 eureka server 同步之后服务实例个数还是 0，
+    #如果启动后和其他 Eureka Server 同步之后服务实例个数还是 0，
     #那么等待这个配置这么长时间之后再提供服务，在此期间收到的查询请求都会返回 403
-    #目前，由于默认的 registry-sync-retries 为 0，所以其实启动后和其他 eureka server 不会同步
+    #目前，由于默认的 registry-sync-retries 为 0，所以其实启动后和其他 Eureka Server 不会同步
     #实例个数肯定是 0，但是默认的情况下，如果实例个数为 0 则认为实例个数为 eureka.instance.registry.default-open-for-traffic-count配置的的值，默认为 1
     #所以，都用默认配置的话，其实这个机制不生效，参考代码 org.springframework.cloud.netflix.eureka.server.openForTraffic
     wait-time-in-ms-when-sync-empty: 300000
-    #启动时从其他 eureka server 同步服务实例信息的最大重试次数，直到实例个数不为 0，默认为 0，这样其实就是不同步
+    #启动时从其他 Eureka Server 同步服务实例信息的最大重试次数，直到实例个数不为 0，默认为 0，这样其实就是不同步
     registry-sync-retries: 0
-    #启动时从其他 eureka server 同步服务实例信息重试间隔
+    #启动时从其他 Eureka Server 同步服务实例信息重试间隔
     registry-sync-retry-wait-ms: 30000
-    #在启用自我保护的时候才有用
+    #这个配置在两个地方被使用：
     #如果启用用了自我保护，则会 renewal-threshold-update-interval-ms 指定的时间内，收到的心跳请求个数是否小于实例个数乘以这个 renewal-percent-threshold
+    #定时任务检查过期实例，每次最多过期 1 - renewal-percent-threshold 这么多比例的实例
     renewal-percent-threshold: 0.85
     #主动检查服务实例是否失效的任务执行间隔，默认是 60s
     eviction-interval-timer-in-ms: 3000
     #是否启用只读缓存，也就是 readCacheMap，否则不会使用 readCacheMap，而是所有的实例更新以及读取，都会在 readWriteCacheMap 上面，这样导致锁冲突频繁，效率低下。
     use-read-only-response-cache: true
-    #eureka server缓存 readWriteCacheMap 失效时间，这个只有在这个时间过去后缓存才会失效，失效前不会更新，过期后从registry重新读取注册服务信息，registry是一个ConcurrentHashMap。
+    #responseCache 的 readWriteCacheMap 初始大小
+    initial-capacity-of-response-cache: 1000
+    #Eureka Server缓存 readWriteCacheMap 失效时间，这个只有在这个时间过去后缓存才会失效，失效前不会更新，过期后从registry重新读取注册服务信息，registry是一个ConcurrentHashMap。
     #由于启用了 evict（主动检查服务实例是否失效） 其实就用不太上改这个配置了
     #默认180s
     response-cache-auto-expiration-in-seconds: 180
-    #eureka server 刷新 readCacheMap 的时间，注意，client 读取的是 readCacheMap，这个时间决定了多久会把 readWriteCacheMap 的缓存更新到 readCacheMap 上
+    #Eureka Server 刷新 readCacheMap 的时间，注意，client 读取的是 readCacheMap，这个时间决定了多久会把 readWriteCacheMap 的缓存更新到 readCacheMap 上
     #默认30s
     response-cache-update-interval-ms: 3000
     #是否关闭 delta 接口，也就是不是用增量更新，这样 recentlyChangedQueue 也就没啥用了。默认为 false
@@ -206,7 +327,7 @@ eureka:
     peer-eureka-status-refresh-time-interval-ms: 0
     #已经没有用了
     number-of-replication-retries: 0
-    #eureka server 通过 httpclient 访问其他 eureka server 同步实例，httpclient 的连接超时，默认 200ms
+    #Eureka Server 通过 httpclient 访问其他 Eureka Server 同步实例，httpclient 的连接超时，默认 200ms
     peer-node-connect-timeout-ms: 200
     #httpclient 的读取超时，默认 200ms，一般不用太长
     peer-node-read-timeout-ms: 200
@@ -230,11 +351,11 @@ eureka:
     max-elements-in-peer-replication-pool: 10000
     #处理非批量任务的线程池队列长度，默认为 10000
     max-elements-in-status-replication-pool: 10000
-    #集群内至少有多少个 UP 的 eureka server 实例数量，当前 eureka server 状态为 UP。默认 -1，也就是 eureka server 状态不考虑 UP 的集群内其他 eureka server 数量。
+    #集群内至少有多少个 UP 的 Eureka Server 实例数量，当前 Eureka Server 状态为 UP。默认 -1，也就是 Eureka Server 状态不考虑 UP 的集群内其他 Eureka Server 数量。
     min-available-instances-for-peer-replication: -1
     #请求其他实例任务的最大超时时间，默认 30 秒
     max-time-for-replication: 30000
-    #是否禁用通过 delta 请求其他 Region 的 eureka server
+    #是否禁用通过 delta 请求其他 Region 的 Eureka Server
     disable-delta-for-remote-regions: false
     #请求其他 Region 的 httpclient 的连接超时，默认 1000ms
     remote-region-connect-timeout-ms: 1000
@@ -249,18 +370,18 @@ eureka:
     #请求其他 Region 的 http 请求是否开启 gzip，对于其他 Region 我们认为网络连接是比较慢的，所以默认开启压缩
     g-zip-content-from-remote-region: true
     #    remote-region-urls-with-name:
+    #      region2eureka1: http://127:0:0:1:8212/eureka/
+    #      region2eureka2: http://127:0:0:1:8213/eureka/
     #    remote-region-app-whitelist:
     #如果需要从其他 Region 获取实例信息，这个获取间隔，默认为 30s
     remote-region-registry-fetch-interval: 30
     #如果需要从其他 Region 获取实例信息，这个任务的线程池，默认为 20个
     remote-region-fetch-thread-pool-size: 20
     #当收到服务实例心跳请求，可能会有 lastDirtyTimestamp 标识上次实例信息修改时间。
-    #如果这个时间和 eureka server 内存中记录的服务实例的 lastDirtyTimestamp 不一样的话，如果配置 sync-when-timestamp-differs，会返回 404
+    #如果这个时间和 Eureka Server 内存中记录的服务实例的 lastDirtyTimestamp 不一样的话，如果配置 sync-when-timestamp-differs，会返回 404
     #如果 eureka client 心跳请求响应为 404 的话，则会重新发送注册请求更新服务实例信息
     sync-when-timestamp-differs: true
-    #如果当前 eureka server 没有某个服务的实例，是否禁用从其他region获取实例，默认是 false
+    #如果当前 Eureka Server 没有某个服务的实例，是否禁用从其他region获取实例，默认是 false
     disable-transparent-fallback-to-other-region: true
     #目前没用了
     batch-replication: false
-
-
