@@ -84,10 +84,15 @@ public class LoadBalancerTest {
     public void testReturnNext() {
         ReactiveLoadBalancer<ServiceInstance> testService =
                 loadBalancerClientFactory.getInstance("testService");
-        ServiceInstance server1 = Mono.from(testService.choose()).block().getServer();
-        ServiceInstance server2 = Mono.from(testService.choose()).block().getServer();
-        //每次选择的是不同实例
-        Assert.assertNotEquals(server1.getInstanceId(), server2.getInstanceId());
+        Span span = tracer.nextSpan();
+        for (int i = 0; i < 100; i++) {
+            try (Tracer.SpanInScope cleared = tracer.withSpanInScope(span)) {
+                ServiceInstance server1 = Mono.from(testService.choose()).block().getServer();
+                ServiceInstance server2 = Mono.from(testService.choose()).block().getServer();
+                //每次选择的是不同实例
+                Assert.assertNotEquals(server1.getInstanceId(), server2.getInstanceId());
+            }
+        }
     }
 
     /**

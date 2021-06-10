@@ -133,38 +133,98 @@ management:
 
 eureka:
   client:
+    # 可用区列表，key 为 region，value 为 zone
+    availability-zones:
+      region1: zone1, zone2
+      region2: zone3
+    # 所在区域，通过这个读取 availability-zones 获取 zone，然后通过 zone 读取 service-url 获取对应的 eureka url
+    region: region1
+    # key 为 zone，value 为 eureka 链接，以逗号分隔
+    service-url:
+      # 默认eureka集群,这里必须是defaultZone，不能用-替换大写，与其他的配置不一样，因为实在EurekaClientConfigBean里面写死的
+      defaultZone: http://127.0.0.1:8211/eureka/
+      zone1: http://127.0.0.1:8212/eureka/
+      zone2: http://127.0.0.1:8213/eureka/
+      zone3: http://127.0.0.1:8214/eureka/
+    # eureka
+    eureka-service-url-poll-interval-seconds: 300
     # eureka client刷新本地缓存时间
     # 默认30s
     registry-fetch-interval-seconds: 5
-    service-url:
-      # 默认eureka集群, 这里和其他配置不一样，不能用中划线替代驼峰配置，因为是map的key
-      defaultZone: http://127.0.0.1:8211/eureka/
-      zone1: http://127.0.0.1:8211/eureka/
-    # 是否注册将本实例到 Eureka，默认为 true，这里写这个配置主要为了测试的时候改成 false 方便
-    register-with-eureka: true
-    # 是否注册从 Eureka 读取实例，默认为 true，这里写这个配置主要为了测试的时候改成 false 方便
-    fetch-registry: true
-    # 实例信息同步到 Eureka 初始时间间隔
-    initial-instance-info-replication-interval-seconds: 5
+    # 实例信息同定时同步到 Eureka Server 的间隔时间。每隔这么长时间，检查实例信息（即eureka.instance配置信息）是否发生变化，如果发生变化，则同步到 Eureka Server，默认 30s
+    # 主要检查两类信息，分别是服务地址相关信息，以及服务过期时间与刷新时间配置信息
+    instance-info-replication-interval-seconds: 30
+    # 实例信息同定时同步到 Eureka Server 的初始延迟时间，默认 40s
+    initial-instance-info-replication-interval-seconds: 40
+    # 代理相关配置
+    # proxy-host:
+    # proxy-port:
+    # proxy-user-name:
+    # proxy-password:
+    # 是否对于发往 Eureka Server 的 http 请求启用 gzip，目前已经过期了，只要 Eureka Server 启用了 gzip，请求就是 gzip 压缩的
+    g-zip-content: true
+    # httpclient 的链接超时，默认 5s
+    eureka-server-connect-timeout-seconds: 5
+    # httpclient 的读取超时，默认 5s
+    eureka-server-read-timeout-seconds: 8
+    # httpclient 的总连接数量，默认 200
+    eureka-server-total-connections: 200
+    # httpclient 的每个 host 的连接数量
+    eureka-server-total-connections-per-host: 50
+    # 是否使用 dns 获取
+
+  #    use-dns-for-fetching-service-urls: false
+  #    eureka-service-url-poll-interval-seconds:
   instance:
-    lease-expiration-duration-in-seconds: 15
-    lease-renewal-interval-in-seconds: 5
+    #一般不用我们自己设置，EurekaInstanceConfigBean 的构造器会通过 InetUtils 获取 ip 地址
+    #ip-address:
+    #一般不用我们自己设置，EurekaInstanceConfigBean 的构造器会通过 InetUtils 获取 hostname
+    #hostname:
+    #注册到 eureka 上面供其他实例访问的地址使用 ip 进行注册，其他实例会通过 ip 进行访问
     prefer-ip-address: true
-    metadata-map:
-      zone: zone1
+    #不用设置 non-secure-port，自动使用 server.port 作为 non-secure-port
+    #non-secure-port:
+    #如果 secure-port-enabled 是true，则会我们一般内部调用不用 ssl，所以不需要配置 secure-port
+    #secure-port:
+    #默认是启用 non-secure-port 的
+    non-secure-port-enabled: true
+    #默认是不启用 secure-port 的
+    secure-port-enabled: false
+    #个性化的实例id，包括 ip:微服务名称:端口
     instance-id: ${spring.cloud.client.ip-address}:${spring.application.name}:${server.port}
-    # app名称，不填写在Spring-cloud-netflix体系下默认就是spring.application.name
+    # app名称，不填写在 Spring-cloud-netflix 体系下默认就是 spring.application.name
     appname: ${spring.application.name}
-    # 目前没啥卵用，可以用这个扩展一些功能
-    #    app-group-name:
-    # 主机名称，如果不填写，就通过org.springframework.cloud.commons.util.InetUtils从网卡读取，如果填写了，则会覆盖，并ip-address也需要设置
-    #    hostname:
-    # ip名称，如果不填写，就通过org.springframework.cloud.commons.util.InetUtils从网卡读取，如果填写了，则会覆盖，并hostname也需要设置
-    #    ip-address:
-    # 是否注册到Eureka就是UP的状态，如果标记为false，那么在注册到Eureka上面的时候就是Starting状态而不是UP状态，参考源码：`com.netflix.appinfo.providers.EurekaConfigBasedInstanceInfoProvider`
-    # 之后我们会想到一个问题，就是什么时候才将
-    instanceEnabledOnit: true
-    non-secure-port: ${server.port}
+    #app组名称归类用的，目前也没什么用
+    app-group-name: common
+    #实例命名空间，目前也没什么用
+    namespace: public
+    # 服务过期时间配置,超过这个时间没有接收到心跳EurekaServer就会将这个实例剔除
+    # 注意，EurekaServer一定要设置eureka.server.eviction-interval-timer-in-ms否则这个配置无效
+    # 这个配置一般为服务刷新时间配置的三倍
+    # 默认90s
+    lease-expiration-duration-in-seconds: 15
+    #服务刷新时间配置，每隔这个时间会主动心跳一次
+    #默认30s
+    lease-renewal-interval-in-seconds: 5
+    registry:
+      #请参考 wait-time-in-ms-when-sync-empty 配置说明
+      default-open-for-traffic-count: 1
+      #初始期望发送心跳请求的实例个数，默认为1，在有新实例注册的时候，会 +1，有注销的时候会 -1，初始默认为 1 一般因为自己也注册到 eureka 上
+      expected-number-of-clients-sending-renews: 1
+    #实例注册后是否立刻开始服务，默认为 false，一般注册后还需要做一些操作，所以注册实例的状态是 STARTING。后面改变状态后会更新为 UP
+    instance-enabled-onit: false
+    #元数据map，我们可以自己使用，放一些个性化的元数据，目前只有 configPath 和 zone 比较有用。 configPath 是使用 spring-cloud-config 的时候会设置
+    metadata-map:
+      # spring cloud 体系中，可用区的配置放入元数据中，key 为 zone
+      zone: zone1
+    # 健康检查地址，默认是 /actuator/health
+    health-check-url-path: /actuator/health
+    # 实例状态地址，默认是 /actuator/info
+    status-page-url-path: /actuator/info
+    # 首页地址，默认是 /
+    home-page-url-path: /
+
+
 feign:
   hystrix:
     # 关闭 hystrix 断路器

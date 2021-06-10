@@ -87,10 +87,7 @@ eureka:
     instanceEnabledOnit: true
     non-secure-port: ${server.port}
 
-# 关闭 feign 的 hystrix
-feign:
-  hystrix:
-    enabled: false
+
 ---
 test:
   read-timeout: false
@@ -181,10 +178,6 @@ eureka:
     instanceEnabledOnit: true
     non-secure-port: ${server.port}
 
-# 关闭 feign 的 hystrix
-feign:
-  hystrix:
-    enabled: false
 ---
 test:
   read-timeout: true
@@ -275,10 +268,7 @@ eureka:
     instanceEnabledOnit: true
     non-secure-port: ${server.port}
 
-# 关闭 feign 的 hystrix
-feign:
-  hystrix:
-    enabled: false
+
 ---
 test:
   read-timeout: true
@@ -368,9 +358,3 @@ eureka:
     # 之后我们会想到一个问题，就是什么时候才将
     instanceEnabledOnit: true
     non-secure-port: ${server.port}
-
-# 关闭 feign 的 hystrix
-feign:
-  hystrix:
-    enabled: false
-

@@ -44,6 +44,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
@@ -59,6 +60,8 @@ import static org.mockito.Mockito.when;
         "resilience4j.thread-pool-bulkhead.configs." + OpenFeignClientTest.CONTEXT_ID_2 + ".coreThreadPoolSize=" + OpenFeignClientTest.TEST_SERVICE_2_THREAD_POOL_SIZE,
         "resilience4j.thread-pool-bulkhead.configs." + OpenFeignClientTest.CONTEXT_ID_2 + ".maxThreadPoolSize=" + OpenFeignClientTest.TEST_SERVICE_2_THREAD_POOL_SIZE,
         "resilience4j.circuitbreaker.configs.default.failureRateThreshold=" + OpenFeignClientTest.DEFAULT_FAILURE_RATE_THRESHOLD,
+        "resilience4j.circuitbreaker.configs.default.slidingWindowType=TIME_BASED",
+        "resilience4j.circuitbreaker.configs.default.slidingWindowSize=5",
         "resilience4j.circuitbreaker.configs.default.minimumNumberOfCalls=" + OpenFeignClientTest.DEFAULT_MINIMUM_NUMBER_OF_CALLS,
         "resilience4j.circuitbreaker.configs." + OpenFeignClientTest.CONTEXT_ID_2 + ".failureRateThreshold=" + OpenFeignClientTest.TEST_SERVICE_2_FAILURE_RATE_THRESHOLD,
         "resilience4j.circuitbreaker.configs." + OpenFeignClientTest.CONTEXT_ID_2 + ".minimumNumberOfCalls=" + OpenFeignClientTest.TEST_SERVICE_2_MINIMUM_NUMBER_OF_CALLS,
@@ -144,64 +147,67 @@ public class OpenFeignClientTest {
         }
     }
 
-    @Aspect
-    public static class ApacheHttpClientAop {
-        //在最后一步 ApacheHttpClient 切面
-        @Pointcut("execution(* com.github.hashjang.spring.cloud.iiford.service.common.feign.ApacheHttpClient.execute(..))")
-        public void annotationPointcut() {
-        }
-
-        @Around("annotationPointcut()")
-        public Object around(ProceedingJoinPoint pjp) throws Throwable {
-            //调用次数加1
-            callCount += 1;
-            //设置 Header，不能通过 Feign 的 RequestInterceptor，因为我们要拿到最后调用 ApacheHttpClient 的线程上下文
-            Request request = (Request) pjp.getArgs()[0];
-            Field headers = ReflectionUtils.findField(Request.class, "headers");
-            ReflectionUtils.makeAccessible(headers);
-            Map<String, Collection<String>> map = (Map<String, Collection<String>>) ReflectionUtils.getField(headers, request);
-            HashMap<String, Collection<String>> stringCollectionHashMap = new HashMap<>(map);
-            stringCollectionHashMap.put(THREAD_ID_HEADER, List.of(String.valueOf(Thread.currentThread().getId())));
-            ReflectionUtils.setField(headers, request, stringCollectionHashMap);
-            return pjp.proceed();
-        }
-    }
-
     /**
      * 验证配置生效
      */
     @Test
-    public void testRetry() {
+    public void testRetry() throws InterruptedException {
+        //防止断路器影响
+        TimeUnit.SECONDS.sleep(5);
         callCount = 0;
         try {
             testService1Client.testGetRetryStatus500();
         } catch (Exception e) {
         }
         Assert.assertEquals(callCount, 3);
+        //防止断路器影响
+        TimeUnit.SECONDS.sleep(5);
         callCount = 0;
         try {
             testService1Client.testPostRetryStatus500();
         } catch (Exception e) {
         }
         Assert.assertEquals(callCount, 1);
+        //防止断路器影响
+        TimeUnit.SECONDS.sleep(5);
         callCount = 0;
         try {
             testService2Client.testGetRetryStatus500();
         } catch (Exception e) {
         }
         Assert.assertEquals(callCount, 2);
+        //防止断路器影响
+        TimeUnit.SECONDS.sleep(5);
         callCount = 0;
         try {
             testService2Client.testPostRetryStatus500();
         } catch (Exception e) {
         }
         Assert.assertEquals(callCount, 1);
+        //防止断路器影响
+        TimeUnit.SECONDS.sleep(5);
         callCount = 0;
         try {
-            testService2Client.testPostWithAnnontationRetryStatus500();
+            testService2Client.testPostWithAnnotationRetryStatus500();
         } catch (Exception e) {
         }
         Assert.assertEquals(callCount, 2);
+    }
+
+    @FeignClient(name = "testService2", contextId = CONTEXT_ID_2)
+    public interface TestService2Client {
+        @GetMapping("/anything")
+        HttpBinAnythingResponse anything();
+
+        @GetMapping("/status/500")
+        String testGetRetryStatus500();
+
+        @PostMapping("/status/500")
+        String testPostRetryStatus500();
+
+        @RetryableMethod
+        @PostMapping("/status/500")
+        String testPostWithAnnotationRetryStatus500();
     }
 
     @Test(expected = RetryableException.class)
@@ -409,20 +415,27 @@ public class OpenFeignClientTest {
         });
     }
 
-    @FeignClient(name = "testService2", contextId = CONTEXT_ID_2)
-    public interface TestService2Client {
-        @GetMapping("/anything")
-        HttpBinAnythingResponse anything();
+    @Aspect
+    public static class ApacheHttpClientAop {
+        //在最后一步 ApacheHttpClient 切面
+        @Pointcut("execution(* com.hopegaming.spring.cloud.parent.web.common.feign.ApacheHttpClient.execute(..))")
+        public void annotationPointcut() {
+        }
 
-        @GetMapping("/status/500")
-        String testGetRetryStatus500();
-
-        @PostMapping("/status/500")
-        String testPostRetryStatus500();
-
-        @RetryableMethod
-        @PostMapping("/status/500")
-        String testPostWithAnnontationRetryStatus500();
+        @Around("annotationPointcut()")
+        public Object around(ProceedingJoinPoint pjp) throws Throwable {
+            //调用次数加1
+            callCount += 1;
+            //设置 Header，不能通过 Feign 的 RequestInterceptor，因为我们要拿到最后调用 ApacheHttpClient 的线程上下文
+            Request request = (Request) pjp.getArgs()[0];
+            Field headers = ReflectionUtils.findField(Request.class, "headers");
+            ReflectionUtils.makeAccessible(headers);
+            Map<String, Collection<String>> map = (Map<String, Collection<String>>) ReflectionUtils.getField(headers, request);
+            HashMap<String, Collection<String>> stringCollectionHashMap = new HashMap<>(map);
+            stringCollectionHashMap.put(THREAD_ID_HEADER, List.of(String.valueOf(Thread.currentThread().getId())));
+            ReflectionUtils.setField(headers, request, stringCollectionHashMap);
+            return pjp.proceed();
+        }
     }
 
     public static class TestService1ClientConfiguration {
