@@ -418,7 +418,7 @@ public class OpenFeignClientTest {
     @Aspect
     public static class ApacheHttpClientAop {
         //在最后一步 ApacheHttpClient 切面
-        @Pointcut("execution(* com.hopegaming.spring.cloud.parent.web.common.feign.ApacheHttpClient.execute(..))")
+        @Pointcut("execution(* com.github.hashjang.spring.cloud.iiford.service.common.feign.ApacheHttpClient.execute(..))")
         public void annotationPointcut() {
         }
 
